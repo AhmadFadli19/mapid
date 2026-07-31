@@ -4,18 +4,19 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class MapidSeeder extends Seeder
 {
     public function run(): void
     {
         // Truncate existing to re-seed clean
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Schema::disableForeignKeyConstraints();
         DB::table('boarding_recommendations')->truncate();
         DB::table('exits')->truncate();
         DB::table('facilities')->truncate();
         DB::table('stations')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        Schema::enableForeignKeyConstraints();
 
         // 1. Seed Stations (MRT, LRT, KRL Commuter Line, Kereta Antarkota & Luar Kota)
         $stations = [
