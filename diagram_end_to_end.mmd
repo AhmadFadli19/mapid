@@ -1,0 +1,13 @@
+%% End to End Diagram MAPID Transit Intelligence
+%% File: diagram_end_to_end.mmd
+
+graph TD
+    A[User] -->|1. Input Request / Navigasi| B[Frontend WebGIS]
+    B -->|2. HTTP Request JSON| C[Laravel API]
+    C -->|3. Forward Request| D[Transit Intelligence Engine]
+    D -->|4. Query Data Spasial (Stasiun, Exit, Facility, POI)| E[Spatial Analysis Module]
+    E -->|5. Spatial Data POI & Facility| D
+    D -->|6. Generate Recommendation berdasarkan konteks| F[Recommendation Layer]
+    F -->|7. Recommendation Payload| C
+    C -->|8. HTTP Response JSON| B
+    B -->|9. Render Peta & Notifikasi| A

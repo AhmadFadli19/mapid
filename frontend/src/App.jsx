@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import WebGisHeader from './components/WebGisHeader';
 import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import WebGisDashboardPage from './pages/WebGisDashboardPage';
+import MobileTransitScreen from './pages/MobileTransitScreen';
 import SearchPage from './pages/SearchPage';
 import RoutePlannerPage from './pages/RoutePlannerPage';
 import StationProfilePage from './pages/StationProfilePage';
@@ -29,56 +32,125 @@ export default function App() {
   return (
     <Router>
       <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
-        {/* Render Navbar when user is logged in */}
-        {user && <Navbar user={user} onLogout={handleLogout} />}
+        {/* PanduYuk WebGIS Header (shown when logged in) */}
+        {user && <WebGisHeader user={user} onLogout={handleLogout} />}
 
         {/* Main Content Area */}
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+        <main className="flex-1 flex flex-col overflow-hidden">
           <Routes>
             <Route
               path="/login"
               element={
                 user ? (
-                  <Navigate to="/dashboard" replace />
+                  <Navigate to="/webgis-dashboard" replace />
                 ) : (
                   <LoginPage onLoginSuccess={(u) => setUser(u)} />
                 )
               }
             />
 
+            {/* NEW: WebGIS Dashboard (Full-screen 3-column layout) */}
+            <Route
+              path="/webgis-dashboard"
+              element={user ? <WebGisDashboardPage /> : <Navigate to="/login" replace />}
+            />
+
+            {/* NEW: Mobile Transit Screen */}
+            <Route
+              path="/mobile"
+              element={user ? <MobileTransitScreen /> : <Navigate to="/login" replace />}
+            />
+
+            {/* Existing routes - wrap in padded container */}
             <Route
               path="/dashboard"
-              element={user ? <DashboardPage /> : <Navigate to="/login" replace />}
+              element={
+                user ? (
+                  <div className="max-w-7xl w-full mx-auto p-4 md:p-6">
+                    <DashboardPage />
+                  </div>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
             />
             <Route
               path="/search"
-              element={user ? <SearchPage /> : <Navigate to="/login" replace />}
+              element={
+                user ? (
+                  <div className="max-w-7xl w-full mx-auto p-4 md:p-6">
+                    <SearchPage />
+                  </div>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
             />
             <Route
               path="/route-planner"
-              element={user ? <RoutePlannerPage /> : <Navigate to="/login" replace />}
+              element={
+                user ? (
+                  <div className="max-w-7xl w-full mx-auto p-4 md:p-6">
+                    <RoutePlannerPage />
+                  </div>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
             />
             <Route
               path="/station-profile"
-              element={user ? <StationProfilePage /> : <Navigate to="/login" replace />}
+              element={
+                user ? (
+                  <div className="max-w-7xl w-full mx-auto p-4 md:p-6">
+                    <StationProfilePage />
+                  </div>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
             />
             <Route
               path="/boarding-recommendation"
-              element={user ? <BoardingRecommendationPage /> : <Navigate to="/login" replace />}
+              element={
+                user ? (
+                  <div className="max-w-7xl w-full mx-auto p-4 md:p-6">
+                    <BoardingRecommendationPage />
+                  </div>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
             />
             <Route
               path="/arrival-reminder"
-              element={user ? <ArrivalReminderPage /> : <Navigate to="/login" replace />}
+              element={
+                user ? (
+                  <div className="max-w-7xl w-full mx-auto p-4 md:p-6">
+                    <ArrivalReminderPage />
+                  </div>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
             />
             <Route
               path="/community-reports"
-              element={user ? <CommunityReportsPage /> : <Navigate to="/login" replace />}
+              element={
+                user ? (
+                  <div className="max-w-7xl w-full mx-auto p-4 md:p-6">
+                    <CommunityReportsPage />
+                  </div>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
             />
 
             {/* Default Fallback */}
             <Route
               path="*"
-              element={<Navigate to={user ? "/dashboard" : "/login"} replace />}
+              element={<Navigate to={user ? '/webgis-dashboard' : '/login'} replace />}
             />
           </Routes>
         </main>

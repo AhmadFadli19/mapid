@@ -2,9 +2,10 @@
 
 @layer base {
   body {
-    @apply bg-slate-900 text-slate-100 font-sans antialiased;
+    @apply bg-slate-900 text-slate-100 antialiased;
     margin: 0;
     padding: 0;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   }
 }
 
@@ -12,16 +13,17 @@
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
-/* Custom Scrollbar for sleek dark mode */
+/* ── Custom Scrollbar ─────────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -35,4 +37,119 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+/* ── Map canvas — hide leaflet attribution branding ────────────── */
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* ── Custom animations ─────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+/* Animate-in utility (used by modals) */
+.animate-in {
+  animation: slide-up 0.25s ease-out;
+}
+
+.fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.slide-in-from-bottom-4 {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* ── Glassmorphism helpers ─────────────────────────────────────── */
+.glass {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-light {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ── Map grid dot pattern ──────────────────────────────────────── */
+.map-grid-bg {
+  background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── Train car hover glow ──────────────────────────────────────── */
+.car-recommended {
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
+}
+
+/* ── Transit line gradient ─────────────────────────────────────── */
+.transit-line-krl {
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+}
+
+/* ── Status badge pulse ────────────────────────────────────────── */
+.status-pulse {
+  position: relative;
+}
+
+.status-pulse::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.3);
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }

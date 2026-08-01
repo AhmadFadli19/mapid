@@ -1,0 +1,21 @@
+%% Sequence Diagram MAPID Transit Intelligence
+%% File: diagram_sequence.mmd
+
+sequenceDiagram
+    autonumber
+    actor User as User
+    participant FE as Frontend WebGIS
+    participant API as Laravel API
+    participant Engine as Transit Intelligence Engine
+    participant GIS as Spatial Analysis Module
+
+    User->>FE: Input tujuan dan preferensi
+    FE->>API: POST /api/v1/recommendation
+    API->>Engine: Olah konteks perjalanan
+    Engine->>GIS: 4. Query Data Spasial (Stasiun, Exit, Facility, POI)
+    GIS-->>Engine: Return data fasilitas & jarak
+    Engine->>Engine: 6. Generate Recommendation berdasarkan konteks
+    Engine-->>API: Return objek rekomendasi
+    API-->>FE: HTTP 200 OK (JSON Payload)
+    FE->>FE: Render layer peta & rekomendasi
+    FE-->>User: Tampilkan panduan perjalanan

@@ -7,11 +7,11 @@ use App\Http\Controllers\Api\MapidController;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes for MAPID Transit Intelligence
+| API Routes for PanduYuk Transit Intelligence & TransJakarta BRT
 |--------------------------------------------------------------------------
 */
 
-// Auth Routes (React FE replacement for Blade)
+// Authentication Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -19,11 +19,29 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/map/search', [MapidController::class, 'search']);
 Route::get('/stations', [MapidController::class, 'getStations']);
 Route::get('/stations/{id}', [MapidController::class, 'getStationProfile']);
-Route::get('/route/plan', [MapidController::class, 'planRoute']);
+Route::get('/stations/{id}/routes', [MapidController::class, 'getStationRoutes']);
 
-// Protected Routes (Sanctum)
+// Route Planning & Transit Intelligence
+Route::match(['get', 'post'], '/route/plan', [MapidController::class, 'planRoute']);
+
+// GeoJSON Feeds for MAPID MAPS
+Route::get('/transit/stations-geojson', [MapidController::class, 'getStationsGeoJson']);
+Route::get('/transit/routes-geojson', [MapidController::class, 'getRoutesGeoJson']);
+
+// Protected & Public Community Reports
+Route::post('/community-report', [MapidController::class, 'submitReport']);
+
+// v1 API Route Group matching specification
+Route::prefix('v1')->group(function () {
+    Route::get('/stations', [MapidController::class, 'getStationsGeoJson']);
+    Route::get('/stations/{id}', [MapidController::class, 'getStationProfile']);
+    Route::get('/stations/{id}/routes', [MapidController::class, 'getStationRoutes']);
+    Route::get('/routes/geojson', [MapidController::class, 'getRoutesGeoJson']);
+    Route::match(['get', 'post'], '/route/plan', [MapidController::class, 'planRoute']);
+    Route::post('/community-report', [MapidController::class, 'submitReport']);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::post('/community-report', [MapidController::class, 'submitReport']);
 });

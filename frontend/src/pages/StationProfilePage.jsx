@@ -6,6 +6,7 @@ export default function StationProfilePage() {
   const [stations, setStations] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [profile, setProfile] = useState(null);
+  const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -30,6 +31,8 @@ export default function StationProfilePage() {
     try {
       const res = await api.get(`/stations/${id}`);
       setProfile(res.data);
+      const routesRes = await api.get(`/stations/${id}/routes`);
+      setRoutes(routesRes.data?.routes || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -89,6 +92,43 @@ export default function StationProfilePage() {
                 <span className="text-lg font-mono font-bold text-emerald-400">{profile.station.code}</span>
               </div>
             </div>
+
+            {/* TransJakarta Routes Grid */}
+            {routes && routes.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <span className="text-sm">🚌</span> Rute TransJakarta Terintegrasi Melintas ({routes.length})
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                  {routes.map((r) => (
+                    <div
+                      key={r.route_id}
+                      className="bg-slate-900/80 border border-slate-700/60 p-3 rounded-2xl flex items-center gap-2.5"
+                    >
+                      <span
+                        className="text-xs font-black px-2.5 py-1 rounded-xl shrink-0"
+                        style={{
+                          backgroundColor: r.route_color || '#ea580c',
+                          color: r.route_text_color || '#ffffff',
+                        }}
+                      >
+                        {r.route_short_name || r.route_id}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-200 truncate">
+                          {r.route_long_name}
+                        </p>
+                        <p className="text-[9px] text-slate-400">
+                          {r.agency_id || 'TransJakarta'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Facilities Categorized Grid */}
             <div className="space-y-4 pt-2">
