@@ -3,14 +3,16 @@ import api from '../services/api';
 import JourneyPanel from '../components/JourneyPanel';
 import StationContextPanel from '../components/StationContextPanel';
 import WebGisMap from '../components/WebGisMap';
-import { Train, Layers, X, SlidersHorizontal, Filter, Activity, Zap, Radio } from 'lucide-react';
+import { Train, Layers, X, SlidersHorizontal, Filter, Activity, Zap, Radio, Bus } from 'lucide-react';
 
 const operators = [
-  { id: 'ALL',              label: 'Semua Moda',      color: 'bg-slate-600' },
-  { id: 'MRT Jakarta',      label: 'MRT Jakarta',     color: 'bg-sky-600' },
-  { id: 'LRT Jabodebek',    label: 'LRT Jabodebek',   color: 'bg-rose-600' },
-  { id: 'KRL Commuter Line',label: 'KRL Commuter',    color: 'bg-emerald-600' },
-  { id: 'KAI Antarkota',    label: 'Kereta Antarkota',color: 'bg-amber-600' },
+  { id: 'ALL',              label: 'Semua Moda',           icon: '🌐', color: 'bg-slate-600' },
+  { id: 'TransJakarta',     label: '🚌 BRT TransJakarta',  icon: '🚌', color: 'bg-orange-600' },
+  { id: 'RAIL_ALL',         label: '🚆 Semua Kereta',      icon: '🚆', color: 'bg-indigo-600' },
+  { id: 'MRT Jakarta',      label: 'MRT Jakarta',          icon: '🚇', color: 'bg-sky-600' },
+  { id: 'LRT Jabodebek',    label: 'LRT Jabodebek',        icon: '🚝', color: 'bg-rose-600' },
+  { id: 'KRL Commuter Line',label: 'KRL Commuter',         icon: '🚆', color: 'bg-emerald-600' },
+  { id: 'KAI Antarkota',    label: 'Kereta Antarkota',     icon: '🚂', color: 'bg-amber-600' },
 ];
 
 export default function WebGisDashboardPage() {
@@ -73,7 +75,15 @@ export default function WebGisDashboardPage() {
 
   const handleFilter = (op) => {
     setSelectedOp(op);
-    setFilteredStations(op === 'ALL' ? stations : stations.filter(s => s.operator === op));
+    if (op === 'ALL') {
+      setFilteredStations(stations);
+    } else if (op === 'TransJakarta') {
+      setFilteredStations(stations.filter(s => s.operator === 'TransJakarta'));
+    } else if (op === 'RAIL_ALL') {
+      setFilteredStations(stations.filter(s => s.operator !== 'TransJakarta'));
+    } else {
+      setFilteredStations(stations.filter(s => s.operator === op));
+    }
   };
 
   const handleSelectStation = (st) => {
@@ -115,11 +125,11 @@ export default function WebGisDashboardPage() {
 
         {/* Journey summary */}
         <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>
-          <span style={{ color: '#f1f5f9', fontWeight: 700 }}>KRL Bogor</span>
+          <span style={{ color: '#ea580c', fontWeight: 700 }}>BRT TJ Corridor 1</span>
           {' → '}
-          <span style={{ color: '#f1f5f9', fontWeight: 700 }}>Sudirman</span>
-          {' · ETA '}
-          <span style={{ color: '#fbbf24', fontWeight: 800 }}>6 Mnt</span>
+          <span style={{ color: '#0284c7', fontWeight: 700 }}>MRT Bundaran HI</span>
+          {' · Transit '}
+          <span style={{ color: '#fbbf24', fontWeight: 800 }}>Dukuh Atas</span>
         </span>
 
         <span style={{ width: 1, height: 14, background: '#334155', flexShrink: 0 }} />
@@ -142,12 +152,17 @@ export default function WebGisDashboardPage() {
               border: selectedOp === op.id ? 'none' : '1px solid rgba(51,65,85,0.6)',
               background: selectedOp === op.id
                 ? op.id === 'ALL'            ? '#475569'
+                  : op.id === 'TransJakarta' ? '#ea580c'
+                  : op.id === 'RAIL_ALL'     ? '#6366f1'
                   : op.id === 'MRT Jakarta'  ? '#0284c7'
                   : op.id === 'LRT Jabodebek'? '#e11d48'
                   : op.id === 'KRL Commuter Line'? '#059669'
                   : '#d97706'
                 : '#1e293b',
               color: selectedOp === op.id ? '#fff' : '#94a3b8',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
             }}
           >
             {op.label}
@@ -159,7 +174,7 @@ export default function WebGisDashboardPage() {
 
         {/* Station count */}
         <span style={{ fontSize: 10, fontWeight: 700, color: '#34d399', flexShrink: 0, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 8, padding: '3px 10px' }}>
-          {filteredStations.length} Stasiun
+          {filteredStations.length} Titik Transit
         </span>
 
         {/* Mobile toggles */}
@@ -179,212 +194,160 @@ export default function WebGisDashboardPage() {
         </button>
       </div>
 
-      {/* ── 3-Column body ──────────────────────────────────────── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+      {/* ── Main Body: 3-column layout ───────────────────────── */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
 
-        {/* ══ LEFT SIDEBAR ══════════════════════════════════════ */}
-        {/* Backdrop (mobile) */}
+        {/* ── LEFT PANEL: Journey & Route Planner ─────────────── */}
+        {/* Desktop */}
+        <aside
+          className={`hidden lg:flex flex-col ${SIDEBAR_W}`}
+          style={{
+            flexShrink: 0,
+            background: '#0f172a',
+            borderRight: '1px solid rgba(51,65,85,0.5)',
+            zIndex: 10,
+          }}
+        >
+          <JourneyPanel
+            stations={stations}
+            selectedStation={selectedStation}
+            onSelectStation={handleSelectStation}
+          />
+        </aside>
+
+        {/* Mobile drawer */}
         {leftOpen && (
           <div
+            className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex"
             onClick={() => setLeftOpen(false)}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 40,
-              background: 'rgba(2,6,23,0.6)', backdropFilter: 'blur(4px)',
-            }}
-            className="lg:hidden"
-          />
-        )}
-
-        <aside
-          style={{
-            width: 288,
-            flexShrink: 0,
-            background: '#0f172a',
-            borderRight: '1px solid rgba(51,65,85,0.4)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-          className="hidden lg:flex"
-        >
-          {/* Sidebar header */}
-          <div style={{
-            padding: '10px 12px',
-            borderBottom: '1px solid rgba(51,65,85,0.4)',
-            display: 'flex', alignItems: 'center', gap: 8,
-            flexShrink: 0, background: '#0f172a',
-          }}>
-            <div style={{ padding: 5, background: 'rgba(16,185,129,0.15)', borderRadius: 8 }}>
-              <Train style={{ width: 14, height: 14, color: '#10b981' }} />
-            </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>Journey & Action Panel</span>
-          </div>
-          {/* Scrollable content */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: 10 }}>
-            <JourneyPanel selectedStation={selectedStation} />
-          </div>
-        </aside>
-
-        {/* Mobile left drawer */}
-        <aside
-          className="lg:hidden"
-          style={{
-            position: 'fixed', top: 0, left: 0, height: '100%',
-            width: 280, zIndex: 50,
-            background: '#0f172a',
-            borderRight: '1px solid rgba(51,65,85,0.4)',
-            display: 'flex', flexDirection: 'column',
-            transform: leftOpen ? 'translateX(0)' : 'translateX(-100%)',
-            transition: 'transform 0.3s ease',
-          }}
-        >
-          <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(51,65,85,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>Journey & Action Panel</span>
-            <button onClick={() => setLeftOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}>
-              <X style={{ width: 14, height: 14 }} />
-            </button>
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: 10 }}>
-            <JourneyPanel selectedStation={selectedStation} />
-          </div>
-        </aside>
-
-        {/* ══ CENTER MAP ════════════════════════════════════════ */}
-        <main style={{ flex: 1, position: 'relative', overflow: 'hidden', minWidth: 0 }}>
-          {/* GTFS ticker */}
-          <div style={{
-            position: 'absolute', top: 12, left: 12, zIndex: 1000,
-            display: 'flex', alignItems: 'center', gap: 7,
-            background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(16,185,129,0.3)',
-            borderRadius: 12, padding: '6px 12px',
-            pointerEvents: 'none',
-          }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#34d399' }}>Kereta berjalan lancar (GTFS Realtime)</span>
-          </div>
-
-          {/* Selected station pill */}
-          {selectedStation && (
-            <div style={{
-              position: 'absolute', top: 12, right: 12, zIndex: 1000,
-              background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(6,182,212,0.4)',
-              borderRadius: 12, padding: '8px 12px',
-              pointerEvents: 'none',
-            }}>
-              <p style={{ fontSize: 9, color: '#64748b', margin: 0 }}>Stasiun Dipilih</p>
-              <p style={{ fontSize: 12, fontWeight: 900, color: '#67e8f9', margin: '2px 0 0' }}>{selectedStation.name}</p>
-              <p style={{ fontSize: 9, color: '#64748b', margin: '1px 0 0' }}>{selectedStation.operator}</p>
-            </div>
-          )}
-
-          {/* Loading overlay */}
-          {loading && (
-            <div style={{
-              position: 'absolute', inset: 0, zIndex: 999,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(4px)',
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                background: '#1e293b', border: '1px solid #334155',
-                borderRadius: 16, padding: '12px 20px',
-              }}>
-                <Zap style={{ width: 16, height: 16, color: '#10b981' }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>Memuat data stasiun...</span>
+          >
+            <div
+              className={`w-80 h-full bg-slate-900 border-r border-slate-700 flex flex-col`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-3 border-b border-slate-800 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <Train className="w-3.5 h-3.5 text-emerald-400" /> Perencana Rute & Stepper
+                </span>
+                <button onClick={() => setLeftOpen(false)} className="text-slate-400 hover:text-white p-1">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <JourneyPanel
+                  stations={stations}
+                  selectedStation={selectedStation}
+                  onSelectStation={(st) => { handleSelectStation(st); setLeftOpen(false); }}
+                />
               </div>
             </div>
-          )}
-
-          {/* The actual Leaflet map — fills remaining space */}
-          <div style={{ position: 'absolute', inset: 0 }}>
-            <WebGisMap
-              stations={filteredStations}
-              selectedStation={selectedStation}
-              stationRoutes={stationRoutes}
-              selectedRouteId={selectedRouteId}
-              searchResults={[]}
-              onSelectStation={handleSelectStation}
-            />
           </div>
-        </main>
-
-        {/* ══ RIGHT SIDEBAR ═════════════════════════════════════ */}
-        {rightOpen && (
-          <div
-            onClick={() => setRightOpen(false)}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 40,
-              background: 'rgba(2,6,23,0.6)', backdropFilter: 'blur(4px)',
-            }}
-            className="lg:hidden"
-          />
         )}
 
+        {/* ── CENTER PANEL: Interactive WebGIS Map Canvas ──────── */}
+        <div style={{ flex: 1, position: 'relative', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+
+          {/* Bottom-left map overlay: Mode Legend (placed at bottom-left to avoid covering map controls) */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 16, left: 16,
+              zIndex: 10,
+              background: 'rgba(15, 23, 42, 0.88)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(51, 65, 85, 0.8)',
+              borderRadius: 12,
+              padding: '10px 14px',
+              fontFamily: 'system-ui, sans-serif',
+              fontSize: 10,
+              color: '#cbd5e1',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 5,
+              pointerEvents: 'none'
+            }}
+          >
+            <span style={{ fontWeight: 800, color: '#f8fafc', fontSize: 11, marginBottom: 2, letterSpacing: '0.3px' }}>
+              Kategori Moda Transit
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ea580c', display: 'inline-block', boxShadow: '0 0 6px #ea580c' }} />
+              <span style={{ fontWeight: 700, color: '#fed7aa' }}>🚌 BRT TransJakarta (Busway)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#0284c7', display: 'inline-block', boxShadow: '0 0 6px #0284c7' }} />
+              <span style={{ fontWeight: 700, color: '#bae6fd' }}>🚇 MRT Jakarta</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#e11d48', display: 'inline-block', boxShadow: '0 0 6px #e11d48' }} />
+              <span style={{ fontWeight: 700, color: '#fecdd3' }}>🚝 LRT Jabodebek</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#059669', display: 'inline-block', boxShadow: '0 0 6px #059669' }} />
+              <span style={{ fontWeight: 700, color: '#a7f3d0' }}>🚆 KRL Commuter Line</span>
+            </div>
+          </div>
+
+          <WebGisMap
+            stations={filteredStations}
+            selectedStation={selectedStation}
+            stationRoutes={stationRoutes}
+            selectedRouteId={selectedRouteId}
+            onSelectStation={handleSelectStation}
+          />
+        </div>
+
+        {/* ── RIGHT PANEL: Station Profile & Micro-Facilities ──── */}
+        {/* Desktop */}
         <aside
+          className={`hidden lg:flex flex-col ${SIDEBAR_W}`}
           style={{
-            width: 288,
             flexShrink: 0,
             background: '#0f172a',
-            borderLeft: '1px solid rgba(51,65,85,0.4)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            borderLeft: '1px solid rgba(51,65,85,0.5)',
+            zIndex: 10,
           }}
-          className="hidden lg:flex"
         >
-          <div style={{
-            padding: '10px 12px',
-            borderBottom: '1px solid rgba(51,65,85,0.4)',
-            display: 'flex', alignItems: 'center', gap: 8,
-            flexShrink: 0, background: '#0f172a',
-          }}>
-            <div style={{ padding: 5, background: 'rgba(6,182,212,0.15)', borderRadius: 8 }}>
-              <Layers style={{ width: 14, height: 14, color: '#06b6d4' }} />
-            </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>Station Context & Insights</span>
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: 10 }}>
-            <StationContextPanel
-              selectedStation={selectedStation}
-              stationRoutes={stationRoutes}
-              loadingRoutes={loadingRoutes}
-              selectedRouteId={selectedRouteId}
-              onSelectRoute={setSelectedRouteId}
-            />
-          </div>
+          <StationContextPanel
+            station={selectedStation}
+            stationRoutes={stationRoutes}
+            loadingRoutes={loadingRoutes}
+            selectedRouteId={selectedRouteId}
+            onSelectRoute={(routeId) => setSelectedRouteId(routeId === selectedRouteId ? null : routeId)}
+          />
         </aside>
 
-        {/* Mobile right drawer */}
-        <aside
-          className="lg:hidden"
-          style={{
-            position: 'fixed', top: 0, right: 0, height: '100%',
-            width: 280, zIndex: 50,
-            background: '#0f172a',
-            borderLeft: '1px solid rgba(51,65,85,0.4)',
-            display: 'flex', flexDirection: 'column',
-            transform: rightOpen ? 'translateX(0)' : 'translateX(100%)',
-            transition: 'transform 0.3s ease',
-          }}
-        >
-          <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(51,65,85,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>Station Context & Insights</span>
-            <button onClick={() => setRightOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}>
-              <X style={{ width: 14, height: 14 }} />
-            </button>
+        {/* Mobile drawer */}
+        {rightOpen && (
+          <div
+            className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex justify-end"
+            onClick={() => setRightOpen(false)}
+          >
+            <div
+              className={`w-80 h-full bg-slate-900 border-l border-slate-700 flex flex-col`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-3 border-b border-slate-800 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" /> Profil & Fasilitas Halte
+                </span>
+                <button onClick={() => setRightOpen(false)} className="text-slate-400 hover:text-white p-1">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <StationContextPanel
+                  station={selectedStation}
+                  stationRoutes={stationRoutes}
+                  loadingRoutes={loadingRoutes}
+                  selectedRouteId={selectedRouteId}
+                  onSelectRoute={(routeId) => setSelectedRouteId(routeId === selectedRouteId ? null : routeId)}
+                />
+              </div>
+            </div>
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: 10 }}>
-            <StationContextPanel
-              selectedStation={selectedStation}
-              stationRoutes={stationRoutes}
-              loadingRoutes={loadingRoutes}
-              selectedRouteId={selectedRouteId}
-              onSelectRoute={setSelectedRouteId}
-            />
-          </div>
-        </aside>
+        )}
 
       </div>
     </div>

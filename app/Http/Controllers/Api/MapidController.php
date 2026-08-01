@@ -52,7 +52,6 @@ class MapidController extends Controller
                       ->whereBetween('latitude', [$minLat, $maxLat]);
             }
         } else {
-            // Apply maximum limit if no bbox provided to prevent 8,000+ DOM node memory bloat
             if ($limit > 0) {
                 $query->limit($limit);
             }
@@ -98,7 +97,9 @@ class MapidController extends Controller
 
     /**
      * GET /api/stations/{id}/routes or /api/v1/stations/{id}/routes
-     * Mendapatkan daftar rute TransJakarta & GeoJSON polylines yang melintasi stasiun/halte tertentu.
+     * Mendapatkan rute spesifik yang melintasi stasiun.
+     * PENTING: Stasiun kereta (MRT, LRT, KRL, KAI) HANYA mengembalikan rute rel kereta,
+     * dan Halte TransJakarta HANYA mengembalikan rute busway BRT TransJakarta.
      */
     public function getStationRoutes($id)
     {
@@ -111,73 +112,96 @@ class MapidController extends Controller
             ], 404);
         }
 
-        // 1. Get cached GTFS stop_id -> route_ids mapping
-        $gtfsStopToRoutes = \Illuminate\Support\Facades\Cache::remember('gtfs_stop_to_routes_map', 86400, function () {
-            $tripsFile = base_path('file_gtfs_tj/trips.txt');
-            $stopTimesFile = base_path('file_gtfs_tj/stop_times.txt');
+        $operator = $station->operator;
+        $isRailStation = ($operator !== 'TransJakarta');
 
-            $tripToRoute = [];
-            if (file_exists($tripsFile) && ($h = fopen($tripsFile, 'r')) !== FALSE) {
-                $header = fgetcsv($h);
-                while (($row = fgetcsv($h)) !== FALSE) {
-                    if (count($row) >= count($header)) {
-                        $data = array_combine($header, $row);
-                        $tripToRoute[$data['trip_id']] = $data['route_id'];
-                    }
-                }
-                fclose($h);
+        if ($isRailStation) {
+            // For Train / Rail Transit (MRT, LRT, KRL, KAI): ONLY return train routes matching the operator!
+            $targetAgency = match ($operator) {
+                'MRT Jakarta' => 'MRT',
+                'LRT Jabodebek' => 'LRT',
+                'KRL Commuter Line', 'KAI Antarkota' => 'KAI',
+                default => null
+            };
+
+            $query = TransitRoute::where('agency_id', '!=', 'Tije')
+                ->where('route_type', '!=', 3);
+
+            if ($targetAgency) {
+                $query->where('agency_id', $targetAgency);
             }
 
-            $map = [];
-            if (file_exists($stopTimesFile) && ($h = fopen($stopTimesFile, 'r')) !== FALSE) {
-                $header = fgetcsv($h);
-                while (($row = fgetcsv($h)) !== FALSE) {
-                    if (count($row) >= count($header)) {
-                        $data = array_combine($header, $row);
-                        $stopId = $data['stop_id'];
-                        $tripId = $data['trip_id'];
-                        if (isset($tripToRoute[$tripId])) {
-                            $routeId = $tripToRoute[$tripId];
-                            $map[$stopId][$routeId] = true;
+            $routes = $query->get();
+        } else {
+            // For TransJakarta BRT Bus Stops: ONLY return TransJakarta GTFS bus routes!
+            $gtfsStopToRoutes = \Illuminate\Support\Facades\Cache::remember('gtfs_stop_to_routes_map', 86400, function () {
+                $tripsFile = base_path('file_gtfs_tj/trips.txt');
+                $stopTimesFile = base_path('file_gtfs_tj/stop_times.txt');
+
+                $tripToRoute = [];
+                if (file_exists($tripsFile) && ($h = fopen($tripsFile, 'r')) !== FALSE) {
+                    $header = fgetcsv($h);
+                    while (($row = fgetcsv($h)) !== FALSE) {
+                        if (count($row) >= count($header)) {
+                            $data = array_combine($header, $row);
+                            $tripToRoute[$data['trip_id']] = $data['route_id'];
+                        }
+                    }
+                    fclose($h);
+                }
+
+                $map = [];
+                if (file_exists($stopTimesFile) && ($h = fopen($stopTimesFile, 'r')) !== FALSE) {
+                    $header = fgetcsv($h);
+                    while (($row = fgetcsv($h)) !== FALSE) {
+                        if (count($row) >= count($header)) {
+                            $data = array_combine($header, $row);
+                            $stopId = $data['stop_id'];
+                            $tripId = $data['trip_id'];
+                            if (isset($tripToRoute[$tripId])) {
+                                $routeId = $tripToRoute[$tripId];
+                                $map[$stopId][$routeId] = true;
+                            }
+                        }
+                    }
+                    fclose($h);
+                }
+
+                foreach ($map as $sId => $rDict) {
+                    $map[$sId] = array_keys($rDict);
+                }
+
+                return $map;
+            });
+
+            $routeIds = [];
+            $rawStopId = str_replace('TJ_', '', $station->code);
+            if (isset($gtfsStopToRoutes[$rawStopId])) {
+                $routeIds = $gtfsStopToRoutes[$rawStopId];
+            }
+
+            // Spatial proximity fallback ONLY among TransJakarta GTFS bus routes
+            if (empty($routeIds)) {
+                $tjRoutes = TransitRoute::where('agency_id', 'Tije')->get();
+                foreach ($tjRoutes as $route) {
+                    $coords = $route->coordinates ?? [];
+                    foreach ($coords as $pt) {
+                        $dLat = abs($pt[1] - $station->latitude);
+                        $dLon = abs($pt[0] - $station->longitude);
+                        if ($dLat <= 0.0025 && $dLon <= 0.0025) {
+                            $routeIds[] = $route->route_id;
+                            break;
                         }
                     }
                 }
-                fclose($h);
             }
 
-            foreach ($map as $sId => $rDict) {
-                $map[$sId] = array_keys($rDict);
-            }
-
-            return $map;
-        });
-
-        $routeIds = [];
-        $rawStopId = str_replace('TJ_', '', $station->code);
-        if (isset($gtfsStopToRoutes[$rawStopId])) {
-            $routeIds = $gtfsStopToRoutes[$rawStopId];
+            $routes = TransitRoute::whereIn('route_id', array_unique($routeIds))
+                ->where(function($q) {
+                    $q->where('agency_id', 'Tije')->orWhere('route_type', 3);
+                })
+                ->get();
         }
-
-        // 2. Spatial proximity fallback or supplement if routeIds is empty or for hubs
-        if (empty($routeIds) || in_array($station->operator, ['TransJakarta', 'MRT Jakarta', 'LRT Jabodebek', 'KRL Commuter Line'])) {
-            $allRoutes = TransitRoute::all();
-            foreach ($allRoutes as $route) {
-                if (in_array($route->route_id, $routeIds)) continue;
-                $coords = $route->coordinates ?? [];
-                foreach ($coords as $pt) {
-                    // $pt is [lon, lat]
-                    $dLat = abs($pt[1] - $station->latitude);
-                    $dLon = abs($pt[0] - $station->longitude);
-                    // Approx 350 meters threshold
-                    if ($dLat <= 0.0035 && $dLon <= 0.0035) {
-                        $routeIds[] = $route->route_id;
-                        break;
-                    }
-                }
-            }
-        }
-
-        $routes = TransitRoute::whereIn('route_id', array_unique($routeIds))->get();
 
         // Format GeoJSON FeatureCollection
         $features = $routes->map(function ($r) {
@@ -194,7 +218,7 @@ class MapidController extends Controller
                     'route_long_name' => $r->route_long_name,
                     'color' => $r->route_color,
                     'text_color' => $r->route_text_color,
-                    'operator' => 'TransJakarta'
+                    'operator' => $r->agency_id === 'Tije' ? 'TransJakarta' : $r->agency_id
                 ]
             ];
         });
@@ -217,7 +241,6 @@ class MapidController extends Controller
             ]
         ]);
     }
-
 
     /**
      * GET /api/map/search
@@ -590,7 +613,7 @@ class MapidController extends Controller
                     'route_long_name' => $r->route_long_name,
                     'color' => $r->route_color,
                     'text_color' => $r->route_text_color,
-                    'operator' => 'TransJakarta'
+                    'operator' => $r->agency_id === 'Tije' ? 'TransJakarta' : $r->agency_id
                 ]
             ];
         });

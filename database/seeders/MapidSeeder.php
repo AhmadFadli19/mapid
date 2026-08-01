@@ -9,6 +9,7 @@ use App\Models\ExitGate;
 use App\Models\BoardingRecommendation;
 use App\Models\CommunityReport;
 use App\Models\StationTenant;
+use App\Models\TransitRoute;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -71,7 +72,7 @@ class MapidSeeder extends Seeder
                 'id' => 5,
                 'code' => 'MRI',
                 'name' => 'Stasiun Manggarai',
-                'operator' => 'KAI Commuter',
+                'operator' => 'KRL Commuter Line',
                 'line_color' => '#16a34a',
                 'latitude' => -6.209900,
                 'longitude' => 106.849900,
@@ -98,7 +99,81 @@ class MapidSeeder extends Seeder
             }
         }
 
-        // 2. Facilities
+        // 2. Rail Transit Routes (MRT, LRT, KRL, KAI)
+        $railRoutes = [
+            [
+                'route_id' => 'MRT_NORTH_SOUTH',
+                'agency_id' => 'MRT',
+                'route_short_name' => 'MRT North-South',
+                'route_long_name' => 'MRT Jakarta Line (Bundaran HI - Lebak Bulus)',
+                'route_type' => 1,
+                'route_color' => '#0284c7',
+                'route_text_color' => '#ffffff',
+                'coordinates' => [
+                    [106.822894, -6.193125],
+                    [106.822765, -6.200788],
+                    [106.821000, -6.208500],
+                    [106.811500, -6.225000],
+                    [106.798150, -6.244365],
+                    [106.774000, -6.289000]
+                ]
+            ],
+            [
+                'route_id' => 'LRT_JABODEBEK',
+                'agency_id' => 'LRT',
+                'route_short_name' => 'LRT Jabodebek',
+                'route_long_name' => 'LRT Jabodebek Line (Dukuh Atas - Cawang - Harjamukti)',
+                'route_type' => 0,
+                'route_color' => '#e11d48',
+                'route_text_color' => '#ffffff',
+                'coordinates' => [
+                    [106.822765, -6.200788],
+                    [106.835000, -6.220000],
+                    [106.862400, -6.242850],
+                    [106.890000, -6.370000]
+                ]
+            ],
+            [
+                'route_id' => 'KRL_COMMUTER_LINE',
+                'agency_id' => 'KAI',
+                'route_short_name' => 'KRL Bogor Line',
+                'route_long_name' => 'KRL Commuter Line (Jakarta Kota - Manggarai - Bogor)',
+                'route_type' => 2,
+                'route_color' => '#16a34a',
+                'route_text_color' => '#ffffff',
+                'coordinates' => [
+                    [106.814000, -6.137000],
+                    [106.830000, -6.175000],
+                    [106.849900, -6.209900],
+                    [106.862400, -6.242850],
+                    [106.800000, -6.590000]
+                ]
+            ],
+            [
+                'route_id' => 'KAI_ANTARKOTA',
+                'agency_id' => 'KAI',
+                'route_short_name' => 'KAI Antarkota',
+                'route_long_name' => 'KAI Kereta Antarkota (Gambir - Pasar Senen - Jatinegara)',
+                'route_type' => 2,
+                'route_color' => '#d97706',
+                'route_text_color' => '#ffffff',
+                'coordinates' => [
+                    [106.830000, -6.177000],
+                    [106.845000, -6.185000],
+                    [106.849900, -6.209900],
+                    [106.868000, -6.215000]
+                ]
+            ]
+        ];
+
+        foreach ($railRoutes as $rr) {
+            TransitRoute::updateOrCreate(
+                ['route_id' => $rr['route_id']],
+                $rr
+            );
+        }
+
+        // 3. Facilities
         Facility::create([
             'station_id' => 1,
             'facility_name' => 'Lift Prioritas Difabel & Lansia',
@@ -112,7 +187,7 @@ class MapidSeeder extends Seeder
         ]);
         Facility::create([
             'station_id' => 1,
-            'facility_name' => 'Toilet Ramah Disabilitas & Musholla',
+            'facility_name' => 'Toilet Umum & Musholla',
             'category' => 'Public Facilities',
             'floor' => 'Concourse Level',
             'is_available' => true,
@@ -121,19 +196,8 @@ class MapidSeeder extends Seeder
             'latitude' => -6.193150,
             'longitude' => 106.822900,
         ]);
-        Facility::create([
-            'station_id' => 5,
-            'facility_name' => 'Eskalator Peron 6 & 7 (Bogor Line)',
-            'category' => 'Accessibility',
-            'floor' => 'Peron Lantai 2',
-            'is_available' => true,
-            'status_note' => 'Operasional Lancar',
-            'operating_hours' => '04:00 - 24:00',
-            'latitude' => -6.209910,
-            'longitude' => 106.849910,
-        ]);
 
-        // 3. Exits
+        // 4. Exits
         ExitGate::create([
             'station_id' => 1,
             'gate_name' => 'Exit Gate A (Plaza Indonesia)',
@@ -143,26 +207,8 @@ class MapidSeeder extends Seeder
             'latitude' => -6.192900,
             'longitude' => 106.822600,
         ]);
-        ExitGate::create([
-            'station_id' => 1,
-            'gate_name' => 'Exit Gate B (Wisma Nusantara)',
-            'target_street' => 'Jl. M.H. Thamrin (Sisi Timur)',
-            'is_accessible' => true,
-            'nearest_poi' => 'Hotel Indonesia Kempinski',
-            'latitude' => -6.193300,
-            'longitude' => 106.823100,
-        ]);
-        ExitGate::create([
-            'station_id' => 5,
-            'gate_name' => 'Pintu Keluar Barat (Pasar Manggarai)',
-            'target_street' => 'Jl. Manggarai Utara I',
-            'is_accessible' => true,
-            'nearest_poi' => 'Pasar Manggarai & Halte TransJakarta',
-            'latitude' => -6.209800,
-            'longitude' => 106.849700,
-        ]);
 
-        // 4. Boarding Recommendations
+        // 5. Boarding Recommendations
         BoardingRecommendation::create([
             'station_id' => 1,
             'destination_station_id' => 3,
@@ -171,16 +217,8 @@ class MapidSeeder extends Seeder
             'nearest_exit' => 'Exit Gate A',
             'walking_time_seconds' => 90,
         ]);
-        BoardingRecommendation::create([
-            'station_id' => 5,
-            'destination_station_id' => 1,
-            'car_number' => 'Gerbong 7 atau 8',
-            'reason' => 'Sejajar dengan tangga transit Peron 6 arah Jakarta Kota.',
-            'nearest_exit' => 'Peron Transit Atas',
-            'walking_time_seconds' => 110,
-        ]);
 
-        // 5. Community Reports
+        // 6. Community Reports
         CommunityReport::create([
             'station_id' => 1,
             'report_type' => 'Kebersihan',
@@ -190,17 +228,8 @@ class MapidSeeder extends Seeder
             'latitude' => -6.193200,
             'longitude' => 106.823000,
         ]);
-        CommunityReport::create([
-            'station_id' => 5,
-            'report_type' => 'Penumpukan',
-            'issue' => 'Antrean Panjang di Escalator Peron 6 Jam 17.30',
-            'description' => 'Disarankan ambil gerbong 2 untuk akses tangga manual.',
-            'status' => 'Verified',
-            'latitude' => -6.209900,
-            'longitude' => 106.849800,
-        ]);
 
-        // 6. MAPID Mission Tenants (MENU_GO, STRUK_GO, PROPERTI_GO)
+        // 7. Station Tenants
         StationTenant::create([
             'station_id' => 1,
             'tenant_name' => 'Kopi Kenangan MRT Bundaran HI',
@@ -210,28 +239,6 @@ class MapidSeeder extends Seeder
             'promo_photo' => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93',
             'latitude' => -6.193130,
             'longitude' => 106.822910,
-            'is_active' => true,
-        ]);
-        StationTenant::create([
-            'station_id' => 1,
-            'tenant_name' => 'Indomaret Point Gate B',
-            'mission_type' => 'STRUK_GO',
-            'category' => 'Convenience Store',
-            'price_avg' => 15000,
-            'promo_photo' => 'https://images.unsplash.com/photo-1578916171728-46686eac8d58',
-            'latitude' => -6.193180,
-            'longitude' => 106.822950,
-            'is_active' => true,
-        ]);
-        StationTenant::create([
-            'station_id' => 3,
-            'tenant_name' => 'Apartemen Mahakam Residence',
-            'mission_type' => 'PROPERTI_GO',
-            'category' => 'Transit-Oriented Property (TOD)',
-            'price_avg' => 750000000,
-            'promo_photo' => 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00',
-            'latitude' => -6.244400,
-            'longitude' => 106.798200,
             'is_active' => true,
         ]);
     }
