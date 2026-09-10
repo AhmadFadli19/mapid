@@ -31,4 +31,17 @@ class Facility extends Model
     {
         return $this->belongsTo(Station::class);
     }
+
+    public function getNameAttribute()
+    {
+        return $this->facility_name ?? 'Fasilitas Stasiun';
+    }
+
+    public function getIsAccessibleAttribute()
+    {
+        return strtolower($this->category ?? '') === 'accessibility' ||
+               str_contains(strtolower($this->facility_name ?? ''), 'lift') ||
+               str_contains(strtolower($this->facility_name ?? ''), 'difabel') ||
+               str_contains(strtolower($this->facility_name ?? ''), 'ramp');
+    }
 }

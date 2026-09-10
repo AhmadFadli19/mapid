@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import WebGisHeader from './components/WebGisHeader';
+import WebGisHeader, { PRD_PERSONAS } from './components/WebGisHeader';
 import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -12,15 +12,30 @@ import StationProfilePage from './pages/StationProfilePage';
 import BoardingRecommendationPage from './pages/BoardingRecommendationPage';
 import ArrivalReminderPage from './pages/ArrivalReminderPage';
 import CommunityReportsPage from './pages/CommunityReportsPage';
+import api from './services/api';
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [activePersona, setActivePersona] = useState(PRD_PERSONAS[0]); // Default to Raka (First-timer)
+  const [stations, setStations] = useState([]);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('mapid_user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
+    } else {
+      // Default demo commuter user so PRD evaluation is instant
+      const defaultUser = { id: 1, name: 'Andi Komuter', email: 'andi@panduyuk.id', role: 'Komuter Harian' };
+      setUser(defaultUser);
+      localStorage.setItem('mapid_user', JSON.stringify(defaultUser));
     }
+
+    // Load stations for header
+    api.get('/stations').then((res) => {
+      if (res.data?.data) {
+        setStations(res.data.data);
+      }
+    }).catch(() => {});
   }, []);
 
   const handleLogout = () => {
@@ -33,10 +48,19 @@ export default function App() {
     <Router>
       <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
         {/* PanduYuk WebGIS Header (shown when logged in) */}
-        {user && <WebGisHeader user={user} onLogout={handleLogout} />}
+        {user && (
+          <WebGisHeader
+            user={user}
+            onLogout={handleLogout}
+            activePersona={activePersona}
+            onSelectPersona={setActivePersona}
+            stations={stations}
+          />
+        )}
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-y-auto relative">
+
           <Routes>
             <Route
               path="/login"
@@ -52,7 +76,16 @@ export default function App() {
             {/* NEW: WebGIS Dashboard (Full-screen 3-column layout) */}
             <Route
               path="/webgis-dashboard"
-              element={user ? <WebGisDashboardPage /> : <Navigate to="/login" replace />}
+              element={
+                user ? (
+                  <WebGisDashboardPage
+                    activePersona={activePersona}
+                    onSelectPersona={setActivePersona}
+                  />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
             />
 
             {/* NEW: Mobile Transit Screen */}

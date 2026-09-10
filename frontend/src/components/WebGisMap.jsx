@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import api from '../services/api';
+import api, { getGeoServerLayers } from '../services/api';
 
 const getOperatorIconSymbol = (operator) => {
   if (operator === 'TransJakarta') return '🚌';
@@ -11,10 +11,10 @@ const getOperatorIconSymbol = (operator) => {
   return '🚆'; // KRL Commuter Line
 };
 
-// Map Styles Configuration
+// Map Styles Configuration with MAPID Vector Basemap option
 const MAP_STYLES = {
   dark: {
-    name: '🌙 Dark Mode',
+    name: '🌙 Dark Mode (CARTO)',
     style: {
       version: 8,
       sources: {
@@ -27,7 +27,7 @@ const MAP_STYLES = {
             'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
           ],
           tileSize: 256,
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+          attribution: '&copy; OpenStreetMap &copy; CARTO'
         }
       },
       layers: [
@@ -42,7 +42,7 @@ const MAP_STYLES = {
     }
   },
   light: {
-    name: '☀️ Light Mode',
+    name: '☀️ Light Mode (CARTO)',
     style: {
       version: 8,
       sources: {
@@ -70,7 +70,7 @@ const MAP_STYLES = {
     }
   },
   satellite: {
-    name: '🛰️ Satelit',
+    name: '🛰️ Satelit (Esri)',
     style: {
       version: 8,
       sources: {
@@ -80,7 +80,7 @@ const MAP_STYLES = {
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
           ],
           tileSize: 256,
-          attribution: '&copy; Esri, Maxar, Earthstar Geographics'
+          attribution: '&copy; Esri, Maxar, Earthstar'
         }
       },
       layers: [
@@ -111,18 +111,19 @@ export default function WebGisMap({
   const defaultCenter = [106.822894, -6.193125]; // [lng, lat] for MapLibre
   const [currentStyle, setCurrentStyle] = useState('dark');
   const [is3DMode, setIs3DMode] = useState(true);
+  const [showGeoServerLayer, setShowGeoServerLayer] = useState(true);
   const [fallbackRoutes, setFallbackRoutes] = useState([]);
 
-  // Fetch fallback simplified route polylines if needed
+  // Fetch fallback simplified route polylines
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const res = await api.get('/v1/routes/geojson?limit=30&tolerance=0.0004');
+        const res = await api.get('/v1/routes/geojson?limit=35&tolerance=0.0004');
         if (res.data?.features) {
           setFallbackRoutes(res.data.features);
         }
       } catch (err) {
-        console.error("Failed fetching simplified route polylines:", err);
+        console.error("Failed fetching route polylines:", err);
       }
     };
     fetchRoutes();
@@ -140,13 +141,12 @@ export default function WebGisMap({
       container: mapContainerRef.current,
       style: MAP_STYLES[currentStyle].style,
       center: defaultCenter,
-      zoom: 12.5,
+      zoom: 12.8,
       pitch: initialPitch,
       bearing: -10,
       antialias: true
     });
 
-    // Add Navigation & Location Controls to top-right (legend is moved to bottom-left to prevent overlap)
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.FullscreenControl(), 'top-right');
     map.addControl(
@@ -175,10 +175,7 @@ export default function WebGisMap({
           id: 'routes-glow-layer',
           type: 'line',
           source: 'transit-routes',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
             'line-color': ['coalesce', ['get', 'color'], '#ea580c'],
             'line-width': 12,
@@ -196,10 +193,7 @@ export default function WebGisMap({
           id: 'routes-line-layer',
           type: 'line',
           source: 'transit-routes',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
             'line-color': ['coalesce', ['get', 'color'], '#ea580c'],
             'line-width': [
@@ -209,16 +203,14 @@ export default function WebGisMap({
               hasStationRoutes ? 5 : 3.5
             ],
             'line-opacity': selectedRouteId
-              ? [
-                  'case',
-                  ['==', ['get', 'route_id'], selectedRouteId],
-                  0.95,
-                  0.25
-                ]
+              ? ['case', ['==', ['get', 'route_id'], selectedRouteId], 0.95, 0.25]
               : hasStationRoutes ? 0.9 : 0.75
           }
         });
       }
+
+      // Fetch & Add MAPID GeoServer Halte & Stasiun Layer (Jakarta Timur 2025)
+      fetchGeoServerGeoJson(map);
     });
 
     return () => {
@@ -227,6 +219,36 @@ export default function WebGisMap({
       map.remove();
     };
   }, []);
+
+  // Fetch MAPID GeoServer vector layers and display as MapLibre circle layer
+  const fetchGeoServerGeoJson = async (map) => {
+    try {
+      const halteData = await getGeoServerLayers('halte');
+      if (halteData?.data?.features && halteData.data.features.length > 0) {
+        if (!map.getSource('mapid-geoserver-halte')) {
+          map.addSource('mapid-geoserver-halte', {
+            type: 'geojson',
+            data: halteData.data
+          });
+
+          map.addLayer({
+            id: 'mapid-geoserver-halte-layer',
+            type: 'circle',
+            source: 'mapid-geoserver-halte',
+            paint: {
+              'circle-radius': 6,
+              'circle-color': '#f97316',
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#ffffff',
+              'circle-opacity': 0.85
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('GeoServer layer render note:', e);
+    }
+  };
 
   // Update Map Style when toggled
   useEffect(() => {
@@ -246,54 +268,6 @@ export default function WebGisMap({
         type: 'FeatureCollection',
         features: activeFeatures
       });
-    } else {
-      try {
-        map.addSource('transit-routes', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: activeFeatures
-          }
-        });
-
-        map.addLayer({
-          id: 'routes-glow-layer',
-          type: 'line',
-          source: 'transit-routes',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: {
-            'line-color': ['coalesce', ['get', 'color'], '#ea580c'],
-            'line-width': 12,
-            'line-opacity': [
-              'case',
-              ['==', ['get', 'route_id'], selectedRouteId || ''],
-              0.45,
-              0
-            ]
-          }
-        });
-
-        map.addLayer({
-          id: 'routes-line-layer',
-          type: 'line',
-          source: 'transit-routes',
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: {
-            'line-color': ['coalesce', ['get', 'color'], '#ea580c'],
-            'line-width': [
-              'case',
-              ['==', ['get', 'route_id'], selectedRouteId || ''],
-              7,
-              hasStationRoutes ? 5 : 3.5
-            ],
-            'line-opacity': selectedRouteId
-              ? ['case', ['==', ['get', 'route_id'], selectedRouteId], 0.95, 0.25]
-              : hasStationRoutes ? 0.9 : 0.75
-          }
-        });
-      } catch (e) {
-        // Layer already exists or style loading
-      }
     }
   }, [activeFeatures, selectedRouteId, hasStationRoutes]);
 
@@ -302,11 +276,10 @@ export default function WebGisMap({
     const map = mapRef.current;
     if (!map) return;
 
-    // Clear previous markers
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
-    const visibleStations = (stations || []).slice(0, 200);
+    const visibleStations = (stations || []).slice(0, 250);
 
     visibleStations.forEach((st) => {
       const isSelected = selectedStation?.id === st.id;
@@ -338,14 +311,15 @@ export default function WebGisMap({
               box-shadow: 0 4px 16px rgba(0,0,0,0.6), 0 0 0 3px ${color}55;
               display: flex;
               align-items: center;
-              gap: 4px;
+              gap: 5px;
               white-space: nowrap;
               font-family: system-ui, sans-serif;
               position: relative;
               z-index: 1;
             ">
               <span>${symbol}</span>
-              <span>${st.code || st.name.substring(0, 10)}</span>
+              <span>${st.code || st.name.substring(0, 12)}</span>
+              <span style="background: #10b981; border-radius: 50%; width: 7px; height: 7px; display: inline-block;"></span>
             </div>
           </div>
         `;
@@ -362,13 +336,13 @@ export default function WebGisMap({
             box-shadow: 0 3px 12px rgba(0,0,0,0.5);
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 4px;
             white-space: nowrap;
             font-family: system-ui, sans-serif;
             transition: transform 0.2s ease;
           ">
             <span>${symbol}</span>
-            <span>${st.code || st.name.substring(0, 8)}</span>
+            <span>${st.code || st.name.substring(0, 10)}</span>
           </div>
         `;
       } else {
@@ -385,42 +359,51 @@ export default function WebGisMap({
         `;
       }
 
-      // Popup Content
+      // Popup Node Content with Full Transit Intelligence Quick Actions
       const popupNode = document.createElement('div');
       popupNode.style.cssText = `
         background: #0f172a;
         border: 1px solid #334155;
-        border-radius: 12px;
-        padding: 10px 12px;
-        min-width: 180px;
+        border-radius: 14px;
+        padding: 12px 14px;
+        min-width: 220px;
         font-family: system-ui, sans-serif;
         color: #f8fafc;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.7);
       `;
       popupNode.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
           <span style="
             font-size: 9px; font-weight: 800;
             background: ${color};
-            color: white; padding: 2px 7px;
+            color: white; padding: 2px 8px;
             border-radius: 99px;
-          ">${st.operator === 'TransJakarta' ? '🚌 TransJakarta' : `🚆 ${st.operator}`}</span>
+          ">${symbol} ${st.operator}</span>
           <span style="
             font-size: 9px; font-weight: 700;
-            background: #1e293b; color: #94a3b8;
-            padding: 2px 5px; border-radius: 4px;
-            font-family: monospace;
-          ">${st.code || 'HUB'}</span>
+            background: #1e293b; color: #10b981;
+            padding: 2px 6px; border-radius: 6px;
+            border: 1px solid rgba(16,185,129,0.3);
+          ">🟢 Live</span>
         </div>
-        <h3 style="font-weight: 800; font-size: 13px; color: #f1f5f9; margin: 0 0 3px;">${st.name}</h3>
-        <p style="font-size: 10px; color: #64748b; margin: 0 0 8px;">${st.address || 'Jakarta, Indonesia'}</p>
+        <h3 style="font-weight: 900; font-size: 13px; color: #f1f5f9; margin: 0 0 3px; line-height: 1.3;">${st.name}</h3>
+        <p style="font-size: 10px; color: #94a3b8; margin: 0 0 8px;">${st.address || 'DKI Jakarta, Indonesia'}</p>
+
+        <!-- Quick POI Badges -->
+        <div style="display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap;">
+          <span style="font-size: 9px; background: #1e293b; color: #cbd5e1; padding: 2px 6px; border-radius: 6px;">🚻 Toilet Buka</span>
+          <span style="font-size: 9px; background: #1e293b; color: #cbd5e1; padding: 2px 6px; border-radius: 6px;">🕌 Mushola</span>
+          <span style="font-size: 9px; background: #1e293b; color: #cbd5e1; padding: 2px 6px; border-radius: 6px;">🚪 Exit Gate A</span>
+        </div>
+
         <button id="select-btn-${st.id}" style="
-          font-size: 10px; font-weight: 700;
-          color: #10b981; background: rgba(16,185,129,0.12);
-          border: 1px solid rgba(16,185,129,0.3);
-          border-radius: 8px; padding: 5px 10px;
+          font-size: 10px; font-weight: 800;
+          color: white; background: linear-gradient(135deg, #10b981, #059669);
+          border: none; border-radius: 8px; padding: 6px 12px;
           cursor: pointer; width: 100%; text-align: center;
-        ">Pilih Stasiun / Halte →</button>
+          box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+          transition: transform 0.15s ease;
+        ">Buka Profil & Transit Intelligence →</button>
       `;
 
       const popup = new maplibregl.Popup({ offset: isSelected ? 20 : 10, closeButton: false })
@@ -444,33 +427,6 @@ export default function WebGisMap({
 
       markersRef.current.push(marker);
     });
-
-    // Search Result Markers
-    (searchResults || []).forEach((item) => {
-      const el = document.createElement('div');
-      el.innerHTML = `
-        <div style="
-          background: #10b981; color: white;
-          padding: 4px 8px; border-radius: 8px;
-          font-size: 10px; font-weight: 800;
-          border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        ">📍 ${item.name}</div>
-      `;
-
-      const popup = new maplibregl.Popup({ offset: 10 }).setHTML(`
-        <div style="font-family: system-ui, sans-serif; font-size: 11px; padding: 4px;">
-          <span style="font-size: 9px; font-weight: 800; padding: 2px 6px; background: #10b981; color: white; border-radius: 4px;">${item.type}</span>
-          <p style="font-weight: 700; margin-top: 4px; color: #0f172a;">${item.name}</p>
-        </div>
-      `);
-
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([item.longitude, item.latitude])
-        .setPopup(popup)
-        .addTo(map);
-
-      markersRef.current.push(marker);
-    });
   }, [stations, selectedStation, searchResults]);
 
   // Recenter map on selectedStation changes with 3D camera flyTo animation
@@ -481,7 +437,7 @@ export default function WebGisMap({
     if (selectedStation && selectedStation.latitude && selectedStation.longitude) {
       map.flyTo({
         center: [selectedStation.longitude, selectedStation.latitude],
-        zoom: 15.5,
+        zoom: 15.8,
         pitch: is3DMode ? 50 : 0,
         bearing: -15,
         duration: 1600,
@@ -508,7 +464,7 @@ export default function WebGisMap({
       {/* Map Container Ref */}
       <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
 
-      {/* Floating Control Toolbar */}
+      {/* Top-Left Control Toolbar */}
       <div style={{
         position: 'absolute',
         top: '12px',
@@ -517,11 +473,11 @@ export default function WebGisMap({
         display: 'flex',
         gap: '6px',
         alignItems: 'center',
-        background: 'rgba(15, 23, 42, 0.85)',
+        background: 'rgba(15, 23, 42, 0.88)',
         backdropFilter: 'blur(12px)',
         border: '1px solid rgba(51, 65, 85, 0.8)',
         borderRadius: '12px',
-        padding: '5px 8px',
+        padding: '5px 10px',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
       }}>
         {/* 3D Pitch Toggle */}
@@ -566,12 +522,29 @@ export default function WebGisMap({
             <option key={key} value={key}>{item.name}</option>
           ))}
         </select>
+
+        {/* MAPID GeoServer Layer Indicator */}
+        <div style={{
+          background: 'rgba(16,185,129,0.15)',
+          border: '1px solid rgba(16,185,129,0.4)',
+          borderRadius: '8px',
+          padding: '4px 8px',
+          fontSize: '10px',
+          fontWeight: 800,
+          color: '#34d399',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}>
+          <span>🗺️</span>
+          <span>MAPID GeoServer Layer</span>
+        </div>
       </div>
 
-      {/* Custom CSS overrides for dark glassmorphism MapLibre controls */}
+      {/* Custom CSS overrides for MapLibre UI */}
       <style>{`
         .maplibregl-ctrl-group {
-          background: rgba(15, 23, 42, 0.85) !important;
+          background: rgba(15, 23, 42, 0.88) !important;
           backdrop-filter: blur(12px) !important;
           border: 1px solid rgba(51, 65, 85, 0.8) !important;
           border-radius: 12px !important;

@@ -26,6 +26,14 @@ class MapidSeeder extends Seeder
         Station::truncate();
         Schema::enableForeignKeyConstraints();
 
+        // 0. Sync MAPID GeoServer API Halte & Stasiun Data (api.md)
+        $ingestService = new \App\Services\MapidGeoServerIngestionService();
+        $ingestResult = $ingestService->syncGeoServerData();
+        \Illuminate\Support\Facades\Log::info("GeoServer Ingest Result: ", $ingestResult);
+
+
+
+
         // 1. Stations
         $stationsData = [
             [
@@ -91,13 +99,16 @@ class MapidSeeder extends Seeder
         ];
 
         foreach ($stationsData as $s) {
-            $st = Station::create($s);
+            $dataWithoutId = $s;
+            unset($dataWithoutId['id']);
+            $st = Station::updateOrCreate(['code' => $s['code']], $dataWithoutId);
             if (DB::getDriverName() === 'pgsql') {
                 DB::statement("UPDATE stations SET location = ST_SetSRID(ST_MakePoint(?, ?), 4326) WHERE id = ?", [
                     $s['longitude'], $s['latitude'], $st->id
                 ]);
             }
         }
+
 
         // 2. Rail Transit Routes (MRT, LRT, KRL, KAI)
         $railRoutes = [
@@ -229,17 +240,116 @@ class MapidSeeder extends Seeder
             'longitude' => 106.823000,
         ]);
 
-        // 7. Station Tenants
-        StationTenant::create([
+        // 7. Station Tenants (Menu Go)
+        $tenantsData = [
+            [
+                'station_id' => 1,
+                'tenant_name' => 'Kopi Kenangan Bundaran HI',
+                'mission_type' => 'MENU_GO',
+                'category' => 'Coffee & Bakery',
+                'price_avg' => 22000,
+                'promo_photo' => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=600&q=80',
+                'latitude' => -6.193130,
+                'longitude' => 106.822910,
+                'is_active' => true,
+            ],
+            [
+                'station_id' => 1,
+                'tenant_name' => 'Roti O Stasiun MRT',
+                'mission_type' => 'MENU_GO',
+                'category' => 'Bakery & Pastry',
+                'price_avg' => 14000,
+                'promo_photo' => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
+                'latitude' => -6.193140,
+                'longitude' => 106.822920,
+                'is_active' => true,
+            ],
+            [
+                'station_id' => 1,
+                'tenant_name' => 'Indomaret Point Concourse',
+                'mission_type' => 'MENU_GO',
+                'category' => 'Convenience & Snacks',
+                'price_avg' => 18000,
+                'promo_photo' => 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=600&q=80',
+                'latitude' => -6.193120,
+                'longitude' => 106.822880,
+                'is_active' => true,
+            ],
+            [
+                'station_id' => 2,
+                'tenant_name' => 'Lawson Station Dukuh Atas',
+                'mission_type' => 'MENU_GO',
+                'category' => 'Japanese Oden & Coffee',
+                'price_avg' => 28000,
+                'promo_photo' => 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
+                'latitude' => -6.200800,
+                'longitude' => 106.822780,
+                'is_active' => true,
+            ],
+            [
+                'station_id' => 2,
+                'tenant_name' => 'Starbucks Transit Hub',
+                'mission_type' => 'MENU_GO',
+                'category' => 'Premium Coffee',
+                'price_avg' => 55000,
+                'promo_photo' => 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=600&q=80',
+                'latitude' => -6.200790,
+                'longitude' => 106.822750,
+                'is_active' => true,
+            ],
+            [
+                'station_id' => 5,
+                'tenant_name' => 'Alfamart Express Manggarai',
+                'mission_type' => 'MENU_GO',
+                'category' => 'Retail & Drinks',
+                'price_avg' => 15000,
+                'promo_photo' => 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&w=600&q=80',
+                'latitude' => -6.209910,
+                'longitude' => 106.849920,
+                'is_active' => true,
+            ]
+        ];
+
+        foreach ($tenantsData as $t) {
+            StationTenant::create($t);
+        }
+
+        // 8. Struk Go Data (Digital Receipts)
+        \App\Models\StrukGo::truncate();
+        \App\Models\StrukGo::create([
+            'user_id' => 1,
             'station_id' => 1,
-            'tenant_name' => 'Kopi Kenangan MRT Bundaran HI',
-            'mission_type' => 'MENU_GO',
-            'category' => 'Coffee & Beverages',
-            'price_avg' => 22000,
-            'promo_photo' => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93',
-            'latitude' => -6.193130,
-            'longitude' => 106.822910,
-            'is_active' => true,
+            'receipt_number' => 'STRUK-MAPID-20260823-001',
+            'merchant_name' => 'Kopi Kenangan Bundaran HI',
+            'transaction_type' => 'F&B_PURCHASE',
+            'items_json' => [
+                ['name' => 'Kopi Kenangan Mantan (Large)', 'qty' => 1, 'price' => 24000],
+                ['name' => 'Roti Coklat Keju', 'qty' => 1, 'price' => 12000]
+            ],
+            'subtotal' => 36000,
+            'discount' => 5000,
+            'total_amount' => 31000,
+            'payment_method' => 'QRIS MAPID',
+            'status' => 'SUCCESS',
+            'transaction_time' => now()->subHours(2),
+        ]);
+
+        \App\Models\StrukGo::create([
+            'user_id' => 1,
+            'station_id' => 2,
+            'receipt_number' => 'STRUK-MAPID-20260823-002',
+            'merchant_name' => 'Tiket Transit MRT Dukuh Atas',
+            'transaction_type' => 'TRANSIT_FARE',
+            'items_json' => [
+                ['name' => 'Single Trip MRT Bundaran HI -> Dukuh Atas', 'qty' => 1, 'price' => 4000]
+            ],
+            'subtotal' => 4000,
+            'discount' => 0,
+            'total_amount' => 4000,
+            'payment_method' => 'Kartu Uang Elektronik (KUE)',
+            'status' => 'SUCCESS',
+            'transaction_time' => now()->subHours(5),
         ]);
     }
 }
+

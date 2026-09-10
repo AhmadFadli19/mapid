@@ -50,17 +50,32 @@ export default function LoginPage({ onLoginSuccess }) {
 
       <div className="bg-slate-800/90 backdrop-blur-md border border-slate-700/80 rounded-3xl p-8 w-full max-w-md shadow-2xl z-10">
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="p-3.5 bg-blue-600/20 text-blue-400 rounded-2xl mb-3 border border-blue-500/30 shadow-lg shadow-blue-500/10">
+          <div className="p-3.5 bg-gradient-to-br from-emerald-500 to-cyan-500 text-white rounded-2xl mb-3 shadow-lg shadow-emerald-500/20">
             <MapPin className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">MAPID Transit Intelligence</h1>
-          <p className="text-xs text-slate-400 mt-1">Platform WebGIS & Navigation Companion Transportasi Umum</p>
+          <h1 className="text-2xl font-black tracking-tight text-white">Pandu<span className="text-emerald-400">Yuk</span></h1>
+          <p className="text-xs text-slate-400 mt-1">WebGIS Transit Companion Jabodetabek</p>
         </div>
 
+        {/* 1-Click Demo Access */}
+        <button
+          type="button"
+          onClick={() => {
+            const demoUser = { id: 1, name: 'Andi Komuter', email: 'andi@panduyuk.id', role: 'Komuter Harian' };
+            localStorage.setItem('mapid_token', 'demo-token');
+            localStorage.setItem('mapid_user', JSON.stringify(demoUser));
+            onLoginSuccess(demoUser);
+            navigate('/webgis-dashboard');
+          }}
+          className="w-full mb-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:opacity-90 text-white font-black py-2.5 rounded-2xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          🚀 Masuk Instan (Demo Komuter Jabodetabek)
+        </button>
+
         {/* Info Seeder Jamal */}
-        <div className="mb-5 p-3.5 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-xs text-slate-300">
-          <p className="font-bold text-blue-400 flex items-center gap-1.5 mb-1">
-            <KeyRound className="w-4 h-4" /> Akun Seeder Bawaan (Jamal)
+        <div className="mb-5 p-3.5 bg-slate-900 border border-slate-700 rounded-2xl text-xs text-slate-300">
+          <p className="font-bold text-emerald-400 flex items-center gap-1.5 mb-1">
+            <KeyRound className="w-4 h-4" /> Akun Terdaftar (Jamal)
           </p>
           <p>Email: <strong className="text-white">ayamurok@gmail.com</strong></p>
           <p>Password: <strong className="text-white">jamal1234</strong></p>

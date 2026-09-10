@@ -3,7 +3,9 @@ import api from '../services/api';
 import JourneyPanel from '../components/JourneyPanel';
 import StationContextPanel from '../components/StationContextPanel';
 import WebGisMap from '../components/WebGisMap';
+import GeminiAiAssistant from '../components/GeminiAiAssistant';
 import { Train, Layers, X, SlidersHorizontal, Filter, Activity, Zap, Radio, Bus } from 'lucide-react';
+
 
 const operators = [
   { id: 'ALL',              label: 'Semua Moda',           icon: '🌐', color: 'bg-slate-600' },
@@ -15,7 +17,7 @@ const operators = [
   { id: 'KAI Antarkota',    label: 'Kereta Antarkota',     icon: '🚂', color: 'bg-amber-600' },
 ];
 
-export default function WebGisDashboardPage() {
+export default function WebGisDashboardPage({ activePersona, onSelectPersona }) {
   const [leftOpen,  setLeftOpen]  = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
 
@@ -29,6 +31,14 @@ export default function WebGisDashboardPage() {
   const [loading,          setLoading]          = useState(true);
 
   useEffect(() => { fetchStations(); }, []);
+
+  // Sync selectedStation if persona specifies presetOrigin
+  useEffect(() => {
+    if (activePersona?.presetOrigin && stations.length > 0) {
+      const found = stations.find((s) => s.id === activePersona.presetOrigin);
+      if (found) setSelectedStation(found);
+    }
+  }, [activePersona, stations]);
 
   useEffect(() => {
     if (selectedStation?.id) {
@@ -92,7 +102,7 @@ export default function WebGisDashboardPage() {
   };
 
   // ─── SIDEBAR WIDTH ────────────────────────────────────────────
-  const SIDEBAR_W = 'w-72'; // 288px fixed
+  const SIDEBAR_W = 'w-84'; // 336px comfortable width
 
   return (
     /*
@@ -206,14 +216,18 @@ export default function WebGisDashboardPage() {
             background: '#0f172a',
             borderRight: '1px solid rgba(51,65,85,0.5)',
             zIndex: 10,
+            height: '100%',
+            overflow: 'hidden'
           }}
         >
           <JourneyPanel
             stations={stations}
             selectedStation={selectedStation}
             onSelectStation={handleSelectStation}
+            activePersona={activePersona}
           />
         </aside>
+
 
         {/* Mobile drawer */}
         {leftOpen && (
@@ -238,6 +252,7 @@ export default function WebGisDashboardPage() {
                   stations={stations}
                   selectedStation={selectedStation}
                   onSelectStation={(st) => { handleSelectStation(st); setLeftOpen(false); }}
+                  activePersona={activePersona}
                 />
               </div>
             </div>
@@ -307,16 +322,19 @@ export default function WebGisDashboardPage() {
             background: '#0f172a',
             borderLeft: '1px solid rgba(51,65,85,0.5)',
             zIndex: 10,
+            height: '100%',
+            overflow: 'hidden'
           }}
         >
           <StationContextPanel
-            station={selectedStation}
+            selectedStation={selectedStation}
             stationRoutes={stationRoutes}
             loadingRoutes={loadingRoutes}
             selectedRouteId={selectedRouteId}
             onSelectRoute={(routeId) => setSelectedRouteId(routeId === selectedRouteId ? null : routeId)}
           />
         </aside>
+
 
         {/* Mobile drawer */}
         {rightOpen && (
@@ -338,7 +356,7 @@ export default function WebGisDashboardPage() {
               </div>
               <div className="flex-1 overflow-y-auto">
                 <StationContextPanel
-                  station={selectedStation}
+                  selectedStation={selectedStation}
                   stationRoutes={stationRoutes}
                   loadingRoutes={loadingRoutes}
                   selectedRouteId={selectedRouteId}
@@ -350,6 +368,10 @@ export default function WebGisDashboardPage() {
         )}
 
       </div>
+
+      {/* Floating Gemini AI Transit Intelligence Assistant */}
+      <GeminiAiAssistant selectedStation={selectedStation} />
     </div>
   );
 }
+

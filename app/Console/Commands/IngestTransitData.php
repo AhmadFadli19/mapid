@@ -11,18 +11,25 @@ use App\Models\Station;
 
 class IngestTransitData extends Command
 {
-    protected $signature = 'transit:ingest {--mode=all : Mode of ingestion (gtfs, weather, inarisk, overpass, all)}';
+    protected $signature = 'transit:ingest {--mode=all : Mode of ingestion (gtfs, weather, inarisk, overpass, mapid, all)}';
 
-    protected $description = 'Run PanduYuk Transit Data Ingestion Pipeline (GTFS, BMKG Weather, InaRISK Flood, Overpass)';
+    protected $description = 'Run PanduYuk Transit Data Ingestion Pipeline (GTFS, BMKG Weather, InaRISK Flood, Overpass, MAPID)';
 
     public function handle(
         GtfsIngestionService $gtfsService,
         BmkgWeatherService $weatherService,
         InariskFloodService $floodService,
-        OverpassIngestionService $overpassService
+        OverpassIngestionService $overpassService,
+        \App\Services\MapidGeoServerIngestionService $mapidService
     ): int {
         $mode = $this->option('mode');
         $this->info("🚀 Starting PanduYuk Data Pipeline [Mode: {$mode}]...");
+
+        if ($mode === 'mapid' || $mode === 'all') {
+            $this->info("Fetching live Halte and Stasiun from MAPID GeoServer API...");
+            $res = $mapidService->syncGeoServerData();
+            $this->info("MAPID GeoServer Ingested: {$res['halte_count']} Halte, {$res['stasiun_count']} Stasiun (Total: {$res['total_imported']})");
+        }
 
         if ($mode === 'gtfs' || $mode === 'all') {
             $this->info("Downloading and processing GTFS feeds...");
