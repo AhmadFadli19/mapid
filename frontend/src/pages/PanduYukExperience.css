@@ -1,0 +1,2367 @@
+.pandu-app {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface-soft: #f5f5f7;
+  --surface-blue: #eaf3ff;
+  --surface-green: #eaf9ef;
+  --surface-orange: #fff3df;
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --border: #e5e5ea;
+  --blue: #007aff;
+  --green: #34c759;
+  --orange: #ff9500;
+  --purple: #af52de;
+  --shadow: 0 10px 24px rgba(13, 20, 33, 0.08);
+  container: pandu / inline-size;
+  min-height: 100%;
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.pandu-app.theme-dark {
+  --bg: #0f1115;
+  --surface: #1b1e24;
+  --surface-soft: #222731;
+  --surface-blue: #17253b;
+  --surface-green: #172d22;
+  --surface-orange: #382b19;
+  --text: #f5f5f7;
+  --muted: #a1a1aa;
+  --border: #343945;
+  --blue: #0a84ff;
+  --green: #30d158;
+  --orange: #ff9f0a;
+  --purple: #bf5af2;
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+.pandu-app *,
+.pandu-app *::before,
+.pandu-app *::after {
+  box-sizing: border-box;
+}
+
+.pandu-app button,
+.pandu-app input,
+.pandu-app select,
+.pandu-app textarea {
+  font: inherit;
+}
+
+.pandu-app button {
+  border: 0;
+}
+
+.pandu-app button:focus-visible,
+.pandu-app input:focus-visible,
+.pandu-app select:focus-visible,
+.pandu-app textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--blue) 30%, transparent);
+  outline-offset: 2px;
+}
+
+.desktop-only {
+  display: inline;
+}
+
+.mobile-only {
+  display: none;
+}
+
+.pandu-header {
+  min-height: 82px;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.pandu-brand,
+.pandu-back-link,
+.pandu-desktop-nav button,
+.pandu-avatar,
+.pandu-bottom-nav button,
+.pandu-text-button,
+.pandu-current-location {
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pandu-brand {
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+
+.pandu-wordmark-blue {
+  color: #2584c6;
+}
+
+.pandu-wordmark-cyan {
+  color: #00cbd2;
+}
+
+.pandu-desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin: 0 auto;
+}
+
+.pandu-desktop-nav button {
+  padding: 8px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pandu-desktop-nav button:hover,
+.pandu-desktop-nav button.is-active {
+  color: var(--text);
+}
+
+.pandu-header.has-page-title .pandu-desktop-nav {
+  display: none;
+}
+
+.pandu-back-link {
+  margin-left: 74px;
+  padding: 8px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pandu-back-link:hover {
+  color: var(--text);
+}
+
+.pandu-page-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pandu-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pandu-theme-toggle {
+  width: 96px;
+  height: 38px;
+  padding: 0;
+  position: relative;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.pandu-theme-toggle.is-dark {
+  background: #222731;
+}
+
+.pandu-toggle-knob {
+  width: 30px;
+  height: 30px;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: block;
+  transition: transform 180ms ease;
+}
+
+.pandu-theme-toggle.is-dark .pandu-toggle-knob {
+  transform: translateX(58px);
+}
+
+.pandu-toggle-knob img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pandu-theme-symbol {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  left: 11px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 20px;
+  pointer-events: none;
+}
+
+.pandu-theme-toggle.is-dark .pandu-theme-symbol {
+  left: auto;
+  right: 11px;
+  color: var(--blue);
+}
+
+.pandu-theme-label {
+  min-width: 42px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pandu-avatar {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  position: relative;
+  display: block;
+}
+
+.pandu-avatar img {
+  width: 32px;
+  height: 32px;
+  display: block;
+}
+
+.pandu-avatar span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pandu-page {
+  width: min(100%, 1440px);
+  min-height: calc(100vh - 83px);
+  margin: 0 auto;
+  padding: 48px 47px 60px;
+}
+
+.pandu-home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 720px) minmax(0, 576px);
+  gap: 48px;
+  align-items: start;
+}
+
+.pandu-home-main h1,
+.pandu-subpage-intro h1 {
+  max-width: 720px;
+  margin: 22px 0 4px;
+  color: var(--text);
+  font-size: 38px;
+  line-height: 1.16;
+  letter-spacing: -0.045em;
+}
+
+.pandu-eyebrow,
+.pandu-section-label,
+.pandu-card-label {
+  display: block;
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+.pandu-lede {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.blue-text,
+.pandu-card-label.blue {
+  color: var(--blue);
+}
+
+.green-text,
+.pandu-card-label.green {
+  color: var(--green);
+}
+
+.orange-text,
+.pandu-card-label.orange {
+  color: var(--orange);
+}
+
+.pandu-search-card {
+  min-height: 92px;
+  margin-top: 38px;
+  padding: 16px 16px 16px 23px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+
+.pandu-search-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pandu-search-icon {
+  display: none;
+  color: var(--blue);
+}
+
+.pandu-search-route {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.pandu-search-route span {
+  padding: 0 7px;
+}
+
+.pandu-primary-button,
+.pandu-secondary-button {
+  min-height: 40px;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.pandu-primary-button {
+  color: #ffffff;
+  background: var(--blue);
+}
+
+.pandu-primary-button:hover,
+.pandu-secondary-button:hover {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+
+.pandu-primary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.pandu-search-button {
+  width: 128px;
+  height: 52px;
+  flex: 0 0 auto;
+  border-radius: 16px;
+}
+
+.pandu-map-card {
+  margin-top: 28px;
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+
+.pandu-map-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.pandu-map-card-header h2 {
+  margin: 12px 0 5px;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+}
+
+.pandu-map-card-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pandu-live-status {
+  min-height: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  color: var(--green);
+  background: var(--surface-green);
+  border: 1px solid color-mix(in srgb, var(--green) 25%, transparent);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pandu-live-status span {
+  width: 6px;
+  height: 6px;
+  display: block;
+  background: currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.pandu-map-layer-switcher {
+  margin-top: 18px;
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pandu-map-layer-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+.pandu-map-layer-switcher button {
+  min-height: 30px;
+  padding: 0 11px;
+  flex: 0 0 auto;
+  color: var(--muted);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pandu-map-layer-switcher button:hover,
+.pandu-map-layer-switcher button.is-active {
+  color: #ffffff;
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.pandu-map-content {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 196px;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.pandu-map-viewport {
+  min-width: 0;
+  height: 340px;
+  overflow: hidden;
+  position: relative;
+  background: #dbeafe;
+  border-radius: 19px;
+}
+
+.pandu-map-context {
+  min-width: 0;
+  padding: 17px 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 19px;
+}
+
+.pandu-map-context h3 {
+  margin: 14px 0 4px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.pandu-map-context > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.pandu-map-detail-list {
+  margin-top: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pandu-map-detail-list span {
+  padding: 5px 7px;
+  color: var(--blue);
+  background: var(--surface-blue);
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.pandu-map-route-count {
+  margin-top: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pandu-map-route-count svg {
+  color: var(--green);
+}
+
+.pandu-map-context .pandu-text-button {
+  margin-top: auto;
+  padding-top: 18px;
+  text-align: left;
+}
+
+.pandu-map-context small,
+.pandu-map-footnote {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.pandu-map-context small {
+  margin-top: 12px;
+}
+
+.pandu-map-footnote {
+  margin: 11px 2px 0;
+}
+
+.pandu-desktop-home-cards {
+  margin-top: 31px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pandu-card,
+.pandu-glance-card,
+.pandu-form-card,
+.pandu-timeline-card,
+.pandu-arrival-card,
+.pandu-nearby-card,
+.pandu-monitoring-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.pandu-card {
+  min-height: 214px;
+  padding: 22px 23px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+}
+
+.next-ride-card {
+  background: var(--surface-green);
+  border-color: transparent;
+}
+
+.next-ride-card strong {
+  display: block;
+  margin-top: 27px;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.pandu-card-title {
+  display: block;
+  margin-top: 15px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pandu-card-meta {
+  display: block;
+  margin-top: 17px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.next-ride-arrow {
+  position: absolute;
+  top: 51px;
+  right: 21px;
+  color: var(--green);
+}
+
+.journey-progress-card .pandu-card-title {
+  margin-top: 27px;
+  font-size: 16px;
+}
+
+.journey-progress-card .pandu-card-meta + .pandu-progress {
+  margin-top: 23px;
+}
+
+.pandu-progress {
+  height: 8px;
+  margin-top: 20px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--border);
+}
+
+.pandu-progress span {
+  display: block;
+  width: 63%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+}
+
+.pandu-text-button {
+  margin-top: 14px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pandu-glance-card {
+  min-height: 488px;
+  padding: 25px 27px 22px;
+  border-radius: 26px;
+}
+
+.pandu-glance-card h2,
+.pandu-recommended-route h2,
+.pandu-timeline-card h2,
+.pandu-next-action-card h2,
+.pandu-trust-card h2 {
+  margin: 18px 0 6px;
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+
+.pandu-glance-card > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pandu-mini-map {
+  height: 174px;
+  margin-top: 31px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--surface-blue);
+}
+
+.pandu-map-line {
+  position: absolute;
+  display: block;
+  border-radius: 4px;
+}
+
+.pandu-map-line-a {
+  top: 88px;
+  left: 15%;
+  width: 64%;
+  height: 5px;
+  background: var(--blue);
+}
+
+.pandu-map-line-b {
+  top: 42px;
+  left: 50%;
+  width: 5px;
+  height: 96px;
+  background: var(--purple);
+}
+
+.pandu-map-stop {
+  width: 14px;
+  height: 14px;
+  position: absolute;
+  display: block;
+}
+
+.pandu-map-stop img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pandu-map-stop.stop-one { top: 81px; left: 13%; }
+.pandu-map-stop.stop-two { top: 75px; left: 46%; }
+.pandu-map-stop.stop-three { top: 81px; left: 75%; width: 18px; height: 18px; }
+
+.pandu-map-label {
+  position: absolute;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pandu-map-label.label-one { top: 82px; left: 19%; }
+.pandu-map-label.label-two { top: 76px; left: 55%; }
+.pandu-map-label.label-three { top: 82px; left: 81%; color: var(--text); }
+
+.pandu-next-moment {
+  min-height: 112px;
+  margin-top: 20px;
+  padding: 17px 19px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.pandu-next-moment strong {
+  margin-top: 13px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.pandu-next-moment > span:last-of-type {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pandu-next-moment > svg {
+  position: absolute;
+  top: 42px;
+  right: 19px;
+}
+
+.pandu-quick-actions-block {
+  margin-top: 48px;
+}
+
+.pandu-quick-actions {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.pandu-quick-card {
+  min-height: 118px;
+  padding: 17px 19px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.pandu-quick-card:hover {
+  transform: translateY(-2px);
+}
+
+.pandu-quick-card span {
+  margin-top: 15px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pandu-quick-card small {
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.blue-icon { color: var(--blue); }
+.green-icon { color: var(--green); }
+.orange-icon { color: var(--orange); }
+.purple-icon { color: var(--purple); }
+
+.pandu-mobile-home-cards {
+  display: none;
+}
+
+.pandu-subpage-intro {
+  margin-bottom: 27px;
+}
+
+.pandu-subpage-intro h1 {
+  margin-top: 21px;
+}
+
+.pandu-plan-grid,
+.pandu-trip-grid,
+.pandu-report-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+.pandu-form-card {
+  min-height: 358px;
+  padding: 23px;
+  border-radius: 24px;
+}
+
+.pandu-form-card label {
+  display: block;
+  margin: 28px 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pandu-select-wrap {
+  min-height: 54px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  box-shadow: var(--shadow);
+}
+
+.pandu-field-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
+.orange-field .pandu-field-dot {
+  background: var(--orange);
+}
+
+.pandu-select-wrap select,
+.pandu-when-select,
+.pandu-report-station {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pandu-plan-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.03fr;
+  gap: 24px;
+}
+
+.pandu-when-select {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  font-size: 11px;
+}
+
+.pandu-plan-actions .pandu-primary-button {
+  min-height: 40px;
+  border-radius: 14px;
+}
+
+.pandu-recommended-route {
+  min-height: 358px;
+  padding: 26px 28px 22px;
+  position: relative;
+  background: var(--surface-blue);
+  border-radius: 24px;
+}
+
+.pandu-recommended-route h2 {
+  margin-top: 18px;
+}
+
+.pandu-route-summary {
+  margin: 8px 0 0;
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pandu-route-timeline {
+  width: 300px;
+  margin-top: 24px;
+  position: relative;
+}
+
+.pandu-route-timeline::before {
+  content: '';
+  width: 4px;
+  height: 112px;
+  position: absolute;
+  top: 8px;
+  left: 5px;
+  border-radius: 4px;
+  background: var(--blue);
+}
+
+.pandu-route-stop {
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 16px 70px 1fr;
+  gap: 20px;
+  align-items: center;
+  position: relative;
+}
+
+.pandu-route-stop img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.pandu-route-stop span {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pandu-route-stop strong {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pandu-route-note {
+  position: absolute;
+  top: 157px;
+  left: 360px;
+  right: 30px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pandu-route-cta {
+  min-width: 360px;
+  position: absolute;
+  right: 30px;
+  bottom: 25px;
+}
+
+.pandu-footnote {
+  margin: 31px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pandu-trip-grid {
+  grid-template-columns: minmax(0, 600px) minmax(0, 1fr);
+}
+
+.pandu-timeline-card {
+  min-height: 416px;
+  padding: 23px 27px;
+  border-radius: 24px;
+}
+
+.pandu-timeline-card h2 {
+  margin-top: 18px;
+}
+
+.pandu-timeline-list {
+  margin-top: 34px;
+}
+
+.pandu-timeline-row {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 18px 66px 1fr 70px;
+  gap: 26px;
+  align-items: start;
+  position: relative;
+}
+
+.pandu-timeline-marker {
+  width: 18px;
+  height: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.pandu-timeline-marker img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.pandu-timeline-marker > span {
+  width: 3px;
+  height: 50px;
+  position: absolute;
+  top: 18px;
+  left: 7px;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.pandu-timeline-row.done .pandu-timeline-marker > span {
+  background: var(--green);
+}
+
+.pandu-timeline-time,
+.pandu-timeline-status {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pandu-timeline-row.done .pandu-timeline-time,
+.pandu-timeline-row.done .pandu-timeline-status { color: var(--green); }
+.pandu-timeline-row.next .pandu-timeline-time,
+.pandu-timeline-row.next .pandu-timeline-status { color: var(--blue); }
+.pandu-timeline-row.soon .pandu-timeline-time,
+.pandu-timeline-row.soon .pandu-timeline-status { color: var(--orange); }
+.pandu-timeline-row.later .pandu-timeline-time,
+.pandu-timeline-row.later .pandu-timeline-status { color: var(--muted); }
+
+.pandu-timeline-row strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pandu-trip-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pandu-next-action-card,
+.pandu-trust-card {
+  min-height: 194px;
+  padding: 24px 28px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--surface-blue);
+}
+
+.pandu-next-action-card h2,
+.pandu-trust-card h2 {
+  margin-top: 18px;
+}
+
+.pandu-next-action-card p,
+.pandu-trust-card p,
+.pandu-nearby-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pandu-next-action-card .pandu-primary-button {
+  min-width: 160px;
+  position: absolute;
+  right: 28px;
+  bottom: 24px;
+}
+
+.pandu-arrival-card {
+  min-height: 198px;
+  padding: 23px 27px;
+  position: relative;
+  border-radius: 24px;
+}
+
+.pandu-arrival-grid {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.pandu-arrival-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pandu-arrival-grid span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pandu-arrival-grid strong {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pandu-secondary-button {
+  min-width: 160px;
+  position: absolute;
+  right: 27px;
+  bottom: 18px;
+  color: var(--text);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+}
+
+.pandu-monitoring-card {
+  min-height: 112px;
+  padding: 17px 19px;
+  border-radius: 20px;
+  background: var(--surface-green);
+}
+
+.pandu-monitoring-card strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.pandu-monitoring-card p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.pandu-monitoring-card small {
+  display: block;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.pandu-report-grid {
+  grid-template-columns: minmax(0, 720px) minmax(0, 1fr);
+}
+
+.pandu-report-form {
+  min-height: 430px;
+  padding: 27px;
+}
+
+.pandu-report-types {
+  margin-top: 17px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 27px;
+}
+
+.pandu-report-types button {
+  height: 42px;
+  padding: 0 15px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  box-shadow: var(--shadow);
+}
+
+.pandu-report-types button.is-selected {
+  background: var(--surface-orange);
+  color: var(--text);
+}
+
+.pandu-report-form label {
+  margin-top: 31px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pandu-report-form textarea,
+.pandu-location-row input,
+.pandu-report-photo,
+.pandu-report-station {
+  width: 100%;
+  border: 1px solid var(--border);
+  outline: 0;
+  color: var(--text);
+  background: var(--surface-soft);
+  box-shadow: var(--shadow);
+}
+
+.pandu-report-form textarea {
+  min-height: 100px;
+  margin-top: 9px;
+  padding: 17px;
+  resize: vertical;
+  border-radius: 16px;
+  font-size: 12px;
+}
+
+.pandu-report-form textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.pandu-location-row {
+  margin-top: 9px;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 36px;
+  align-items: center;
+}
+
+.pandu-location-row input {
+  height: 44px;
+  padding: 0 15px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pandu-current-location {
+  padding: 8px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pandu-report-station {
+  height: 44px;
+  margin-top: 9px;
+  padding: 0 15px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pandu-report-photo {
+  height: 44px;
+  margin-top: 9px;
+  padding: 0 15px;
+  border-radius: 14px;
+  font-size: 12px;
+}
+
+.pandu-submit-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 16px;
+  justify-content: flex-start;
+  border-radius: 12px;
+}
+
+.pandu-form-message {
+  margin-top: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.pandu-form-message.success {
+  color: var(--green);
+  background: var(--surface-green);
+}
+
+.pandu-form-message.error {
+  color: #d70015;
+  background: #fff0f0;
+}
+
+.pandu-report-side {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.pandu-trust-card {
+  min-height: 250px;
+}
+
+.pandu-trust-card h2 {
+  max-width: 470px;
+}
+
+.pandu-trust-card p {
+  max-width: 480px;
+  margin-top: 35px;
+}
+
+.pandu-trust-card strong {
+  display: block;
+  margin-top: 65px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pandu-nearby-card {
+  min-height: 148px;
+  padding: 23px 27px;
+  border-radius: 24px;
+}
+
+.pandu-nearby-card > strong {
+  display: block;
+  margin-top: 20px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.pandu-nearby-card p {
+  margin-top: 13px;
+  font-size: 11px;
+}
+
+.pandu-bottom-nav {
+  display: none;
+}
+
+.pandu-toast {
+  max-width: min(420px, calc(100% - 32px));
+  padding: 12px 15px;
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  background: #1d1d1f;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 1100px) {
+  .pandu-page {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  .pandu-home-grid,
+  .pandu-plan-grid,
+  .pandu-trip-grid,
+  .pandu-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pandu-glance-card {
+    min-height: 0;
+  }
+
+  .pandu-map-content {
+    grid-template-columns: minmax(0, 1fr) 220px;
+  }
+
+  .pandu-quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .pandu-app {
+    min-height: 100%;
+    border-radius: 28px;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: inline-flex !important;
+  }
+
+  .pandu-header {
+    min-height: 76px;
+    padding: 0 21px;
+    gap: 0;
+  }
+
+  .pandu-brand {
+    font-size: 19px;
+  }
+
+  .pandu-desktop-nav {
+    display: none;
+  }
+
+  .pandu-header.has-page-title .pandu-brand {
+    display: none;
+  }
+
+  .pandu-header.has-page-title .pandu-theme-toggle,
+  .pandu-header.has-page-title .pandu-theme-label {
+    display: none;
+  }
+
+  .pandu-back-link {
+    margin-left: 0;
+    padding: 0;
+    gap: 17px;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .pandu-back-link svg {
+    width: 18px;
+    height: 18px;
+    color: var(--muted);
+  }
+
+  .pandu-page-title {
+    display: none;
+  }
+
+  .pandu-header-actions {
+    gap: 8px;
+  }
+
+  .pandu-theme-toggle {
+    width: 84px;
+    height: 36px;
+  }
+
+  .pandu-theme-toggle.is-dark .pandu-toggle-knob {
+    transform: translateX(46px);
+  }
+
+  .pandu-theme-label {
+    display: none;
+  }
+
+  .pandu-avatar,
+  .pandu-avatar img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .pandu-avatar span {
+    font-size: 10px;
+  }
+
+  .pandu-page {
+    min-height: calc(100vh - 76px);
+    padding: 26px 21px 88px;
+  }
+
+  .pandu-home-grid {
+    display: block;
+  }
+
+  .pandu-home-main h1,
+  .pandu-subpage-intro h1 {
+    margin-top: 19px;
+    font-size: 25px;
+    line-height: 1.15;
+  }
+
+  .pandu-eyebrow,
+  .pandu-section-label,
+  .pandu-card-label {
+    font-size: 10px;
+  }
+
+  .pandu-lede {
+    font-size: 11px;
+  }
+
+  .pandu-search-card {
+    min-height: 54px;
+    margin-top: 21px;
+    padding: 0 14px;
+    border-radius: 18px;
+  }
+
+  .pandu-search-copy {
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .pandu-search-icon {
+    display: inline-flex;
+  }
+
+  .pandu-search-placeholder {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .pandu-search-button {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    color: var(--blue);
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .pandu-map-card {
+    margin-top: 22px;
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .pandu-map-card-header {
+    gap: 10px;
+  }
+
+  .pandu-map-card-header h2 {
+    margin-top: 10px;
+    font-size: 17px;
+  }
+
+  .pandu-map-card-header p {
+    max-width: 245px;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .pandu-live-status {
+    padding: 0 8px;
+    font-size: 9px;
+  }
+
+  .pandu-map-layer-switcher {
+    margin-top: 14px;
+  }
+
+  .pandu-map-content {
+    display: block;
+  }
+
+  .pandu-map-viewport {
+    height: 282px;
+    border-radius: 15px;
+  }
+
+  .pandu-map-context {
+    margin-top: 10px;
+    padding: 14px;
+    border-radius: 15px;
+  }
+
+  .pandu-map-context h3 {
+    margin-top: 10px;
+    font-size: 14px;
+  }
+
+  .pandu-map-context .pandu-text-button {
+    margin-top: 14px;
+    padding-top: 0;
+  }
+
+  .pandu-map-context small {
+    margin-top: 10px;
+  }
+
+  .pandu-mobile-home-cards {
+    display: block;
+  }
+
+  .pandu-mobile-journey-card {
+    min-height: 178px;
+    margin-top: 25px;
+    padding: 18px 20px;
+    position: relative;
+    background: var(--surface-blue);
+    border-radius: 22px;
+  }
+
+  .pandu-mobile-journey-card strong {
+    display: block;
+    margin-top: 18px;
+    color: var(--text);
+    font-size: 15px;
+  }
+
+  .pandu-mobile-journey-card strong + strong {
+    margin-top: 13px;
+  }
+
+  .pandu-mobile-journey-card .pandu-card-meta {
+    margin-top: 23px;
+    font-size: 11px;
+  }
+
+  .pandu-mobile-journey-card .pandu-primary-button {
+    min-width: 96px;
+    min-height: 38px;
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    border-radius: 12px;
+    font-size: 11px;
+  }
+
+  .mobile-progress-card {
+    min-height: 112px;
+    margin-top: 22px;
+    padding: 15px 17px;
+    border-radius: 20px;
+  }
+
+  .mobile-progress-card .pandu-card-title {
+    margin-top: 14px;
+    font-size: 13px;
+  }
+
+  .mobile-progress-card .pandu-progress {
+    width: calc(100% - 42px);
+    height: 7px;
+    margin-top: 19px;
+  }
+
+  .mobile-progress-card .pandu-progress span {
+    background: var(--green);
+  }
+
+  .pandu-progress-count {
+    position: absolute;
+    right: 17px;
+    bottom: 26px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .pandu-glance-card,
+  .pandu-desktop-home-cards {
+    display: none;
+  }
+
+  .pandu-quick-actions-block {
+    margin-top: 31px;
+  }
+
+  .pandu-quick-actions {
+    margin-top: 15px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 10px;
+  }
+
+  .pandu-quick-card {
+    min-height: 50px;
+    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    grid-template-rows: 17px 15px;
+    column-gap: 10px;
+    border-radius: 16px;
+    box-shadow: none;
+  }
+
+  .pandu-quick-card svg {
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+
+  .pandu-quick-card span {
+    margin: 0;
+    font-size: 10px;
+  }
+
+  .pandu-quick-card small {
+    margin: 0;
+    font-size: 8px;
+  }
+
+  .pandu-subpage-intro {
+    margin-bottom: 26px;
+  }
+
+  .pandu-subpage-intro h1 {
+    max-width: 345px;
+  }
+
+  .pandu-plan-grid,
+  .pandu-trip-grid,
+  .pandu-report-grid {
+    display: block;
+  }
+
+  .pandu-form-card,
+  .pandu-timeline-card,
+  .pandu-arrival-card {
+    border-radius: 20px;
+  }
+
+  .pandu-plan-page .pandu-form-card {
+    min-height: 0;
+    padding: 18px 17px;
+  }
+
+  .pandu-form-card label {
+    margin-top: 22px;
+    font-size: 11px;
+  }
+
+  .pandu-select-wrap {
+    min-height: 48px;
+    border-radius: 14px;
+  }
+
+  .pandu-select-wrap select {
+    font-size: 12px;
+  }
+
+  .pandu-plan-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .pandu-recommended-route {
+    min-height: 315px;
+    margin-top: 18px;
+    padding: 20px 18px;
+    border-radius: 20px;
+  }
+
+  .pandu-recommended-route h2 {
+    font-size: 20px;
+  }
+
+  .pandu-route-summary {
+    font-size: 11px;
+  }
+
+  .pandu-route-timeline {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .pandu-route-note {
+    position: static;
+    margin-top: 8px;
+    font-size: 10px;
+  }
+
+  .pandu-route-cta {
+    min-width: 0;
+    width: calc(100% - 36px);
+    right: 18px;
+    bottom: 18px;
+  }
+
+  .pandu-footnote {
+    margin-top: 19px;
+    font-size: 10px;
+  }
+
+  .pandu-trip-page .pandu-subpage-intro {
+    position: relative;
+  }
+
+  .pandu-trip-page .pandu-secondary-button {
+    position: fixed;
+    top: 51px;
+    right: max(63px, calc((100vw - 390px) / 2 + 63px));
+    z-index: 25;
+  }
+
+  .pandu-timeline-card {
+    min-height: 270px;
+    padding: 17px;
+  }
+
+  .pandu-timeline-card h2 {
+    display: none;
+  }
+
+  .pandu-timeline-list {
+    margin-top: 24px;
+  }
+
+  .pandu-timeline-row {
+    min-height: 48px;
+    grid-template-columns: 18px 52px 1fr 46px;
+    gap: 12px;
+  }
+
+  .pandu-timeline-row strong,
+  .pandu-timeline-time,
+  .pandu-timeline-status {
+    font-size: 10px;
+  }
+
+  .pandu-timeline-row strong {
+    font-size: 11px;
+  }
+
+  .pandu-timeline-marker > span {
+    height: 31px;
+    top: 18px;
+    width: 2px;
+  }
+
+  .pandu-trip-side {
+    gap: 26px;
+    margin-top: 22px;
+  }
+
+  .pandu-next-action-card {
+    min-height: 100px;
+    padding: 16px 18px;
+    border-radius: 18px;
+  }
+
+  .pandu-next-action-card h2 {
+    margin-top: 13px;
+    font-size: 14px;
+  }
+
+  .pandu-next-action-card p {
+    font-size: 10px;
+  }
+
+  .pandu-next-action-card .pandu-primary-button {
+    display: none;
+  }
+
+  .pandu-arrival-card {
+    min-height: 80px;
+    padding: 13px 17px;
+  }
+
+  .pandu-arrival-grid {
+    display: block;
+    margin-top: 14px;
+  }
+
+  .pandu-arrival-grid div {
+    display: inline;
+  }
+
+  .pandu-arrival-grid div:not(:last-child)::after {
+    content: '   ·   ';
+    color: var(--muted);
+  }
+
+  .pandu-arrival-grid span {
+    display: none;
+  }
+
+  .pandu-arrival-grid strong {
+    font-size: 11px;
+  }
+
+  .pandu-arrival-grid div:nth-child(2) strong::before {
+    content: 'Lift ';
+  }
+
+  .pandu-arrival-grid div:nth-child(3) {
+    display: none;
+  }
+
+  .pandu-arrival-card .pandu-secondary-button {
+    display: inline-flex;
+    min-width: 82px;
+    min-height: 32px;
+    padding: 0 15px;
+    top: 51px;
+    right: max(63px, calc((100vw - 390px) / 2 + 63px));
+    bottom: auto;
+    font-size: 10px;
+    background: var(--surface);
+  }
+
+  .pandu-report-page .pandu-subpage-intro {
+    margin-bottom: 26px;
+  }
+
+  .pandu-report-form {
+    min-height: 370px;
+    padding: 17px;
+  }
+
+  .pandu-report-types {
+    margin-top: 15px;
+    gap: 13px;
+  }
+
+  .pandu-report-types button {
+    height: 38px;
+    padding: 0 11px;
+    border-radius: 12px;
+    font-size: 10px;
+  }
+
+  .pandu-report-form label {
+    margin-top: 27px;
+    font-size: 9px;
+  }
+
+  .pandu-report-form textarea {
+    min-height: 88px;
+    margin-top: 10px;
+    padding: 13px;
+    border-radius: 14px;
+    font-size: 11px;
+  }
+
+  .pandu-location-row {
+    display: block;
+    margin-top: 10px;
+  }
+
+  .pandu-location-row input {
+    height: 42px;
+    font-size: 11px;
+  }
+
+  .pandu-current-location {
+    display: none;
+  }
+
+  .pandu-report-station {
+    width: 100%;
+    height: 42px;
+    margin-top: 10px;
+    font-size: 11px;
+  }
+
+  .pandu-report-photo {
+    height: 42px;
+    margin-top: 10px;
+    font-size: 11px;
+  }
+
+  .pandu-submit-button {
+    min-height: 40px;
+    margin-top: 14px;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 11px;
+  }
+
+  .pandu-report-side {
+    gap: 26px;
+    margin-top: 26px;
+  }
+
+  .pandu-trust-card {
+    min-height: 74px;
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .pandu-trust-card .pandu-card-label,
+  .pandu-trust-card h2,
+  .pandu-trust-card p,
+  .pandu-trust-card strong {
+    display: none;
+  }
+
+  .pandu-trust-card::before {
+    content: 'Time + place keep reports verifiable.';
+    display: block;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .pandu-trust-card::after {
+    content: 'Personal details stay private.';
+    display: block;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .pandu-nearby-card {
+    display: none;
+  }
+
+  .pandu-bottom-nav {
+    min-height: 64px;
+    padding: 0 21px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 15;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+
+  .pandu-bottom-nav button {
+    min-width: 0;
+    padding: 9px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .pandu-bottom-nav button.is-active {
+    color: var(--text);
+  }
+
+  .pandu-toast {
+    right: 16px;
+    bottom: 80px;
+    left: 16px;
+    max-width: none;
+  }
+}
+
+.pandu-forced-mobile {
+  width: min(390px, 100%);
+  margin: 0 auto;
+}
+
+/* ── PanduYuk Figma-aligned foundation overrides ─────────────── */
+.pandu-app {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface-soft: #eef1f5;
+  --surface-blue: #eef5ff;
+  --surface-green: #eaf9ef;
+  --surface-orange: #fff7e5;
+  --text: #142033;
+  --muted: #526173;
+  --border: #e5eaf2;
+  --blue: #157bff;
+  --green: #26b865;
+  --orange: #f59e0b;
+  --purple: #7c5cfc;
+  --shadow: 0 8px 24px rgba(20, 33, 51, 0.1);
+}
+
+.pandu-header {
+  min-height: 72px;
+  padding: 0 64px;
+}
+
+.pandu-page {
+  min-height: calc(100vh - 73px);
+  padding: 44px 64px 60px;
+}
+
+.pandu-home-grid {
+  grid-template-columns: minmax(0, 632px) minmax(0, 616px);
+  gap: 64px;
+}
+
+.pandu-home-main h1,
+.pandu-subpage-intro h1 {
+  font-size: 42px;
+  line-height: 1.14;
+}
+
+.pandu-lede {
+  font-size: 14px;
+}
+
+.pandu-search-card {
+  min-height: 108px;
+  border-radius: 22px;
+}
+
+.pandu-glance-card {
+  min-height: 510px;
+  border-radius: 26px;
+}
+
+.pandu-map-card {
+  border-radius: 24px;
+}
+
+.pandu-status-pill {
+  min-height: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pandu-status-pill > span {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pandu-status-pill.success { color: var(--green); background: var(--surface-green); }
+.pandu-status-pill.warning { color: var(--orange); background: var(--surface-orange); }
+.pandu-status-pill.danger { color: #e5484d; background: #fff0f0; }
+
+.pandu-data-source {
+  display: block;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.pandu-empty-state {
+  min-height: 156px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  color: var(--orange);
+  background: var(--surface-orange);
+  border: 1px solid color-mix(in srgb, var(--orange) 18%, transparent);
+  border-radius: 20px;
+}
+
+.pandu-empty-state strong { color: var(--text); font-size: 15px; }
+.pandu-empty-state p { max-width: 520px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.pandu-empty-state .pandu-secondary-button { margin-top: 5px; }
+
+.pandu-icon-button {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--muted);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.pandu-station-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; }
+.pandu-station-intro .pandu-subpage-intro { margin-bottom: 0; }
+.pandu-station-selector { min-width: 250px; display: flex; flex-direction: column; gap: 8px; }
+.pandu-station-selector span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+.pandu-station-selector select { width: 100%; min-height: 42px; padding: 0 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); font-size: 12px; font-weight: 700; }
+
+.pandu-station-meta-row { min-height: 34px; margin-top: 18px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 11px; }
+.pandu-station-meta-row .pandu-data-source { margin: 0 0 0 auto; }
+
+.pandu-station-grid,
+.pandu-facility-grid,
+.pandu-arrival-grid-large,
+.pandu-report-status-grid,
+.pandu-availability-grid { margin-top: 28px; display: grid; grid-template-columns: minmax(0, 1.06fr) minmax(0, .94fr); gap: 24px; align-items: start; }
+
+.pandu-station-map-panel,
+.pandu-station-detail-panel,
+.pandu-facility-map-panel,
+.pandu-facility-list-panel,
+.pandu-exit-recommendation,
+.pandu-alternative-exits,
+.pandu-report-status-card,
+.pandu-verification-card,
+.pandu-availability-card { min-width: 0; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow); }
+
+.pandu-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.pandu-panel-heading h2 { margin: 13px 0 0; color: var(--text); font-size: 22px; line-height: 1.2; letter-spacing: -.035em; }
+.pandu-station-map-viewport,
+.pandu-facility-map-viewport { height: 380px; margin-top: 20px; overflow: hidden; background: var(--surface-soft); border-radius: 18px; }
+.pandu-station-map-viewport .maplibregl-map,
+.pandu-facility-map-viewport .maplibregl-map { width: 100%; height: 100%; }
+.pandu-panel-actions { margin-top: 18px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.pandu-panel-actions .pandu-primary-button,
+.pandu-panel-actions .pandu-secondary-button { min-height: 42px; }
+
+.pandu-detail-tabs { display: flex; gap: 6px; padding-bottom: 15px; overflow-x: auto; border-bottom: 1px solid var(--border); }
+.pandu-detail-tabs button { padding: 8px 13px; color: var(--muted); background: transparent; border-radius: 999px; cursor: pointer; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.pandu-detail-tabs button.is-active { color: var(--blue); background: var(--surface-blue); }
+.pandu-filter-row { min-height: 44px; margin-top: 17px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pandu-inline-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; }
+.pandu-inline-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.pandu-inline-toggle > span { width: 34px; height: 20px; position: relative; display: inline-block; background: var(--border); border-radius: 999px; transition: background 160ms ease; }
+.pandu-inline-toggle > span::after { content: ''; width: 14px; height: 14px; position: absolute; top: 3px; left: 3px; background: var(--surface); border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,.18); transition: transform 160ms ease; }
+.pandu-inline-toggle input:checked + span { background: var(--blue); }
+.pandu-inline-toggle input:checked + span::after { transform: translateX(14px); }
+.pandu-station-list { margin-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+.pandu-station-list-item { min-height: 76px; padding: 12px; display: grid; grid-template-columns: 34px minmax(0,1fr) auto; align-items: start; gap: 11px; background: var(--surface-soft); border-radius: 15px; }
+.pandu-list-icon { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; color: var(--blue); background: var(--surface-blue); border-radius: 12px; }
+.pandu-list-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pandu-list-copy strong { color: var(--text); font-size: 12px; line-height: 1.35; }
+.pandu-list-copy > span { color: var(--muted); font-size: 10px; line-height: 1.35; }
+.pandu-list-copy .pandu-data-source { margin-top: 0; font-size: 9px; }
+
+.pandu-arrival-alert { margin-top: 28px; padding: 24px; display: flex; gap: 16px; background: var(--surface-orange); border: 1px solid color-mix(in srgb, var(--orange) 17%, transparent); border-radius: 22px; }
+.pandu-alert-icon { width: 48px; height: 48px; flex: 0 0 auto; display: grid; place-items: center; color: var(--orange); background: var(--surface); border-radius: 16px; }
+.pandu-arrival-alert h2 { margin: 9px 0 4px; color: var(--text); font-size: 22px; letter-spacing: -.035em; }
+.pandu-arrival-alert p { max-width: 760px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.pandu-arrival-grid-large { grid-template-columns: minmax(0, 1.45fr) minmax(260px, .75fr); }
+.pandu-exit-heading { margin-top: 22px; display: flex; gap: 13px; align-items: center; }
+.pandu-exit-heading h2 { margin: 0; color: var(--text); font-size: 21px; line-height: 1.2; }
+.pandu-exit-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.pandu-exit-meta { margin-top: 22px; display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 11px; font-weight: 700; }
+.pandu-exit-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.pandu-explain-box { margin-top: 22px; padding: 15px; display: flex; gap: 10px; color: var(--blue); background: var(--surface-blue); border-radius: 15px; }
+.pandu-explain-box strong { color: var(--text); font-size: 12px; }
+.pandu-explain-box p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.pandu-explain-box small { display: block; margin-top: 8px; color: var(--muted); font-size: 9px; }
+.pandu-alternative-exits { display: flex; flex-direction: column; gap: 12px; }
+.pandu-alternative-exit { padding: 15px; background: var(--surface-soft); border-radius: 15px; }
+.pandu-alternative-exit strong { display: block; color: var(--text); font-size: 12px; }
+.pandu-alternative-exit span { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.pandu-alternative-exit small { margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; color: var(--green); font-size: 9px; font-weight: 800; }
+
+.pandu-facility-toolbar { margin-top: 26px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.pandu-filter-chips { display: flex; gap: 8px; overflow-x: auto; }
+.pandu-filter-chips button { min-height: 34px; padding: 0 14px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.pandu-filter-chips button.is-active { color: var(--blue); background: var(--surface-blue); border-color: color-mix(in srgb, var(--blue) 25%, var(--border)); }
+.pandu-facility-map-viewport { height: 340px; }
+.pandu-facility-map-panel > .pandu-data-source { margin-top: 15px; }
+.pandu-facility-list-panel > .pandu-card-label { margin-bottom: 16px; }
+.pandu-recommended-facility { padding: 18px; display: grid; grid-template-columns: 42px 1fr; gap: 13px; background: var(--surface-green); border: 1px solid color-mix(in srgb, var(--green) 20%, transparent); border-radius: 18px; }
+.pandu-recommended-facility h2 { margin: 0; color: var(--text); font-size: 17px; }
+.pandu-recommended-facility p { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.pandu-facility-meta { margin-top: 12px; display: flex; gap: 13px; color: var(--green); font-size: 10px; font-weight: 800; }
+.pandu-facility-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.pandu-recommended-facility small { display: block; margin-top: 10px; color: var(--muted); font-size: 9px; }
+.pandu-facility-list-heading { margin-top: 22px; display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; font-weight: 800; }
+.pandu-facility-row { margin-top: 9px; padding: 12px; display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 10px; align-items: start; background: var(--surface-soft); border-radius: 14px; }
+.pandu-facility-row > div:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pandu-facility-row strong { color: var(--text); font-size: 11px; line-height: 1.35; }
+.pandu-facility-row span:not(.pandu-status-pill) { color: var(--muted); font-size: 9px; line-height: 1.35; }
+.pandu-facility-row small { color: var(--muted); font-size: 9px; }
+.pandu-facility-row em { color: var(--orange); font-size: 9px; font-style: normal; }
+.pandu-facility-row.is-unavailable { opacity: .78; }
+.pandu-full-button { width: 100%; margin-top: 15px; }
+
+.pandu-report-status-card h2,
+.pandu-availability-card h2 { margin: 22px 0 8px; color: var(--text); font-size: 24px; line-height: 1.18; letter-spacing: -.035em; }
+.pandu-report-status-card > p,
+.pandu-availability-card > p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.pandu-status-detail { margin-top: 22px; display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 11px; font-weight: 700; }
+.pandu-status-detail span { display: inline-flex; align-items: center; gap: 6px; }
+.pandu-verification-card { display: flex; flex-direction: column; gap: 17px; }
+.pandu-verification-step { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; }
+.pandu-step-number { width: 34px; height: 34px; display: grid; place-items: center; color: var(--muted); background: var(--surface-soft); border-radius: 50%; font-size: 12px; font-weight: 800; }
+.pandu-verification-step.is-complete .pandu-step-number { color: #fff; background: var(--green); }
+.pandu-verification-step strong { display: block; color: var(--text); font-size: 12px; }
+.pandu-verification-step p { margin: 4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.pandu-availability-card { min-height: 280px; }
+.pandu-availability-card .pandu-data-source { margin-top: 24px; }
+.pandu-availability-card .pandu-primary-button,
+.pandu-availability-card .pandu-secondary-button { margin-top: 22px; }
+
+@media (max-width: 1100px) {
+  .pandu-header { padding-right: 32px; padding-left: 32px; }
+  .pandu-page { padding-right: 32px; padding-left: 32px; }
+  .pandu-home-grid { grid-template-columns: minmax(0, 1fr); }
+  .pandu-station-grid,
+  .pandu-facility-grid,
+  .pandu-arrival-grid-large,
+  .pandu-report-status-grid,
+  .pandu-availability-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 680px) {
+  .pandu-header { min-height: 76px; padding: 0 21px; }
+  .pandu-page { min-height: calc(100vh - 76px); padding: 26px 21px 88px; }
+  .pandu-home-main h1,
+  .pandu-subpage-intro h1 { font-size: 25px; }
+  .pandu-station-intro { display: block; }
+  .pandu-station-selector { min-width: 0; margin-top: 19px; }
+  .pandu-station-meta-row { align-items: flex-start; flex-wrap: wrap; }
+  .pandu-station-meta-row .pandu-data-source { width: 100%; margin: 0; }
+  .pandu-station-map-panel,
+  .pandu-station-detail-panel,
+  .pandu-facility-map-panel,
+  .pandu-facility-list-panel,
+  .pandu-exit-recommendation,
+  .pandu-alternative-exits,
+  .pandu-report-status-card,
+  .pandu-verification-card,
+  .pandu-availability-card { padding: 17px; border-radius: 20px; }
+  .pandu-station-map-viewport,
+  .pandu-facility-map-viewport { height: 278px; margin-top: 14px; }
+  .pandu-panel-heading h2 { font-size: 17px; }
+  .pandu-filter-row { align-items: flex-start; flex-direction: column; }
+  .pandu-station-list-item { grid-template-columns: 32px minmax(0,1fr); }
+  .pandu-station-list-item > .pandu-status-pill { grid-column: 2; justify-self: start; }
+  .pandu-arrival-alert { padding: 17px; border-radius: 18px; }
+  .pandu-arrival-alert h2 { font-size: 17px; }
+  .pandu-arrival-alert p { font-size: 11px; }
+  .pandu-exit-heading h2 { font-size: 16px; }
+  .pandu-exit-meta { gap: 9px; flex-direction: column; }
+  .pandu-facility-toolbar { align-items: flex-start; flex-direction: column; }
+  .pandu-facility-row { grid-template-columns: 32px minmax(0,1fr); }
+  .pandu-facility-row > .pandu-status-pill { grid-column: 2; justify-self: start; }
+  .pandu-report-status-card h2,
+  .pandu-availability-card h2 { font-size: 20px; }
+  .pandu-report-status-grid,
+  .pandu-availability-grid { margin-top: 22px; }
+  .pandu-availability-card { min-height: 0; }
+}

@@ -42,27 +42,24 @@ const MAP_STYLES = {
     }
   },
   light: {
-    name: '☀️ Light Mode (CARTO)',
+    name: '☀️ Light Mode (OpenStreetMap)',
     style: {
       version: 8,
       sources: {
-        'carto-light': {
+        'osm-light': {
           type: 'raster',
           tiles: [
-            'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-            'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-            'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-            'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+            'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
           ],
           tileSize: 256,
-          attribution: '&copy; OpenStreetMap &copy; CARTO'
+          attribution: '&copy; OpenStreetMap contributors'
         }
       },
       layers: [
         {
-          id: 'carto-light-layer',
+          id: 'osm-light-layer',
           type: 'raster',
-          source: 'carto-light',
+          source: 'osm-light',
           minzoom: 0,
           maxzoom: 20
         }
@@ -102,14 +99,16 @@ export default function WebGisMap({
   stationRoutes = null,
   selectedRouteId = null,
   searchResults = [],
-  onSelectStation = () => {}
+  onSelectStation = () => {},
+  initialStyle = 'dark',
+  compactControls = false,
 }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
 
   const defaultCenter = [106.822894, -6.193125]; // [lng, lat] for MapLibre
-  const [currentStyle, setCurrentStyle] = useState('dark');
+  const [currentStyle, setCurrentStyle] = useState(MAP_STYLES[initialStyle] ? initialStyle : 'dark');
   const [is3DMode, setIs3DMode] = useState(true);
   const [showGeoServerLayer, setShowGeoServerLayer] = useState(true);
   const [fallbackRoutes, setFallbackRoutes] = useState([]);
@@ -371,6 +370,16 @@ export default function WebGisMap({
         color: #f8fafc;
         box-shadow: 0 12px 32px rgba(0,0,0,0.7);
       `;
+      const popupFacilities = (st.facilities || [])
+        .slice(0, 3)
+        .map((facility) => facility.facility_name || facility.name)
+        .filter(Boolean);
+      const popupFacilityBadges = popupFacilities.length > 0
+        ? popupFacilities.map((facility) => '<span style="font-size: 9px; background: #1e293b; color: #cbd5e1; padding: 2px 6px; border-radius: 6px;">' + facility + '</span>').join('')
+        : '<span style="font-size: 9px; background: #1e293b; color: #cbd5e1; padding: 2px 6px; border-radius: 6px;">Facility status available in station info</span>';
+      const popupUpdatedLabel = st.updated_at
+        ? 'Updated ' + new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(st.updated_at))
+        : 'Last update available in station info';
       popupNode.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
           <span style="
@@ -384,17 +393,13 @@ export default function WebGisMap({
             background: #1e293b; color: #10b981;
             padding: 2px 6px; border-radius: 6px;
             border: 1px solid rgba(16,185,129,0.3);
-          ">🟢 Live</span>
+          ">MAPID data</span>
         </div>
         <h3 style="font-weight: 900; font-size: 13px; color: #f1f5f9; margin: 0 0 3px; line-height: 1.3;">${st.name}</h3>
         <p style="font-size: 10px; color: #94a3b8; margin: 0 0 8px;">${st.address || 'DKI Jakarta, Indonesia'}</p>
 
-        <!-- Quick POI Badges -->
-        <div style="display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap;">
-          <span style="font-size: 9px; background: #1e293b; color: #cbd5e1; padding: 2px 6px; border-radius: 6px;">🚻 Toilet Buka</span>
-          <span style="font-size: 9px; background: #1e293b; color: #cbd5e1; padding: 2px 6px; border-radius: 6px;">🕌 Mushola</span>
-          <span style="font-size: 9px; background: #1e293b; color: #cbd5e1; padding: 2px 6px; border-radius: 6px;">🚪 Exit Gate A</span>
-        </div>
+        <div style="display: flex; gap: 4px; margin-bottom: 5px; flex-wrap: wrap;">${popupFacilityBadges}</div>
+        <p style="font-size: 9px; color: #94a3b8; margin: 0 0 10px;">${popupUpdatedLabel}</p>
 
         <button id="select-btn-${st.id}" style="
           font-size: 10px; font-weight: 800;
@@ -499,7 +504,7 @@ export default function WebGisMap({
           }}
         >
           <span>🏢</span>
-          <span>{is3DMode ? '3D View (50°)' : '2D View (Flat)'}</span>
+          <span>{compactControls ? (is3DMode ? '3D' : '2D') : (is3DMode ? '3D View (50°)' : '2D View (Flat)')}</span>
         </button>
 
         {/* Style Selector */}
@@ -537,7 +542,7 @@ export default function WebGisMap({
           gap: '4px'
         }}>
           <span>🗺️</span>
-          <span>MAPID GeoServer Layer</span>
+          <span>{compactControls ? 'MAPID' : 'MAPID GeoServer Layer'}</span>
         </div>
       </div>
 

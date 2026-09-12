@@ -4,6 +4,23 @@ export const MAPID_API_KEY = 'f776ee857d4c465fa98a38bd44b5ff8d';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+export const normalizeStations = (payload) => {
+  const raw = payload?.data || payload?.features || payload || [];
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((item) => {
+      const station = item?.properties || item;
+      const coordinates = item?.geometry?.coordinates || [];
+      return {
+        ...station,
+        latitude: station.latitude ?? coordinates[1],
+        longitude: station.longitude ?? coordinates[0],
+      };
+    })
+    .filter((station) => station?.id && station?.name && station?.latitude && station?.longitude);
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -120,4 +137,3 @@ export const enrichStationWithAi = async (stationId, force = true) => {
 };
 
 export default api;
-
