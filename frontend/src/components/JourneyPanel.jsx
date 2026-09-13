@@ -60,15 +60,11 @@ export default function JourneyPanel({
   const [calculatedRoute, setCalculatedRoute] = useState(null);
   const [currentStageId, setCurrentStageId] = useState(1);
   const [reminderActive, setReminderActive] = useState(true);
-  const [simulatedDelay, setSimulatedDelay] = useState(false);
-  const [distanceRemaining, setDistanceRemaining] = useState(480);
 
   // Sync initial dropdown selections
   useEffect(() => {
-    if (stations && stations.length > 1) {
-      if (!originId) setOriginId(stations[0].id);
-      if (!destId) setDestId(stations[1]?.id || stations[0].id);
-    }
+    if (originId && !stations.some((station) => String(station.id) === String(originId))) setOriginId('');
+    if (destId && !stations.some((station) => String(station.id) === String(destId))) setDestId('');
   }, [stations]);
 
   // Sync persona presets
@@ -115,9 +111,9 @@ export default function JourneyPanel({
   const arrivalRem = intelObj?.arrival_reminder;
   const monitoring = intelObj?.journey_monitoring;
 
-  const durationMin = routeObj?.estimated_duration_minutes || 14;
-  const totalFare = routeObj?.total_fare || 3500;
-  const distanceKm = routeObj?.distance_km || 4.25;
+  const durationMin = routeObj?.estimated_duration_minutes;
+  const totalFare = routeObj?.total_fare;
+  const distanceKm = routeObj?.distance_km;
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-slate-700 text-slate-100 font-sans">
@@ -149,6 +145,7 @@ export default function JourneyPanel({
               onChange={(e) => setOriginId(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-emerald-500 font-semibold truncate transition"
             >
+              <option value="">Pilih stasiun asal...</option>
               {stations.map((st) => (
                 <option key={`orig-${st.id}`} value={st.id}>
                   {st.name} ({st.operator})
@@ -166,6 +163,7 @@ export default function JourneyPanel({
               onChange={(e) => setDestId(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-cyan-500 font-semibold truncate transition"
             >
+              <option value="">Pilih stasiun tujuan...</option>
               {stations.map((st) => (
                 <option key={`dest-${st.id}`} value={st.id}>
                   {st.name} ({st.operator})
@@ -194,15 +192,15 @@ export default function JourneyPanel({
         <div className="grid grid-cols-3 gap-1.5 pt-1 text-center">
           <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-700/50">
             <span className="text-[8px] text-slate-400 block font-bold uppercase">Jarak</span>
-            <span className="text-xs font-black text-emerald-400 font-mono">{distanceKm} km</span>
+            <span className="text-xs font-black text-emerald-400 font-mono">{distanceKm != null ? `${distanceKm} km` : '—'}</span>
           </div>
           <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-700/50">
             <span className="text-[8px] text-slate-400 block font-bold uppercase">Waktu</span>
-            <span className="text-xs font-black text-amber-400 font-mono">~{durationMin} mnt</span>
+            <span className="text-xs font-black text-amber-400 font-mono">{durationMin != null ? `~${durationMin} mnt` : '—'}</span>
           </div>
           <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-700/50">
             <span className="text-[8px] text-slate-400 block font-bold uppercase">Tarif</span>
-            <span className="text-xs font-black text-cyan-400 font-mono">Rp {totalFare.toLocaleString('id-ID')}</span>
+            <span className="text-xs font-black text-cyan-400 font-mono">{totalFare != null ? `Rp ${Number(totalFare).toLocaleString('id-ID')}` : '—'}</span>
           </div>
         </div>
       </div>
@@ -265,17 +263,17 @@ export default function JourneyPanel({
               <span className="text-xs font-black text-white">Boarding Recommendation</span>
             </div>
             <span className="text-[10px] font-black text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded-lg">
-              {boardingRec?.recommended_car || 'Gerbong 2 atau Pintu A'}
+              {boardingRec?.recommended_car || 'Data unavailable'}
             </span>
           </div>
 
           <div className="p-2.5 bg-emerald-950/40 border border-emerald-800/40 rounded-xl space-y-1.5">
             <p className="text-[11px] text-emerald-200 font-semibold leading-relaxed">
-              💡 <strong>Rekomendasi Cerdas:</strong> {boardingRec?.reason || 'Posisi paling dekat dengan Lift & Eskalator Exit Gate A di stasiun tujuan.'}
+              💡 <strong>Rekomendasi Cerdas:</strong> {boardingRec?.reason || 'Rekomendasi boarding belum tersedia untuk rute ini.'}
             </p>
             <div className="flex items-center justify-between text-[9px] text-slate-400 pt-1 border-t border-emerald-800/30">
-              <span>Metode: <strong>Spatial Relationship Analysis</strong></span>
-              <span>Waktu Jalan: <strong>~{boardingRec?.walking_time_seconds || 75} detik</strong></span>
+              <span>Metode: <strong>{boardingRec?.analysis_method || 'Unavailable'}</strong></span>
+              <span>Waktu Jalan: <strong>{boardingRec?.walking_time_seconds != null ? `~${boardingRec.walking_time_seconds} detik` : '—'}</strong></span>
             </div>
           </div>
 
@@ -283,11 +281,11 @@ export default function JourneyPanel({
           <div>
             <div className="flex items-center justify-between text-[9px] text-slate-400 mb-1.5">
               <span>Rangkaian Kereta (12 Gerbong)</span>
-              <span className="text-emerald-400 font-bold">Gerbong 2 & 7 Strategis</span>
+              <span className="text-emerald-400 font-bold">{boardingRec?.recommended_car ? 'Rekomendasi tersedia' : 'Belum ada rekomendasi'}</span>
             </div>
             <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
               {trainCars.map((car) => {
-                const isRec = car === 2 || car === 7;
+                const isRec = Boolean(boardingRec?.recommended_car && String(boardingRec.recommended_car).includes(String(car)));
                 return (
                   <div
                     key={car}
@@ -315,10 +313,10 @@ export default function JourneyPanel({
               <div className="p-1 bg-sky-500/20 text-sky-400 rounded-lg">
                 <Activity className="w-3.5 h-3.5 animate-pulse" />
               </div>
-              <span className="text-xs font-black text-white">Journey Monitoring (Live)</span>
+              <span className="text-xs font-black text-white">Journey Monitoring</span>
             </div>
             <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-lg font-bold">
-              Background Telemetry
+              {monitoring?.status || 'unavailable'}
             </span>
           </div>
 
@@ -327,17 +325,11 @@ export default function JourneyPanel({
               <div>
                 <p className="text-[10px] text-slate-400">Status Operasional Jalur</p>
                 <p className="text-xs font-bold text-white flex items-center gap-1.5 mt-0.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                  {simulatedDelay ? '⚠️ Keterlambatan +4 Menit (Sinyal)' : 'Layanan Normal & Lancar'}
+                  <span className={`w-2 h-2 rounded-full inline-block ${monitoring?.status === 'live' ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                  {monitoring?.status_label || 'Realtime unavailable'}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setSimulatedDelay(!simulatedDelay)}
-                className="text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-lg border border-slate-600 transition cursor-pointer"
-              >
-                {simulatedDelay ? 'Reset Normal' : 'Simulasi Delay'}
-              </button>
+              <span className="text-[9px] text-slate-500">{monitoring?.delay_seconds != null ? `${monitoring.delay_seconds}s` : 'Delay unavailable'}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -345,17 +337,17 @@ export default function JourneyPanel({
                 <p className="text-[9px] text-slate-400 flex items-center gap-1">
                   <CloudSun className="w-3 h-3 text-amber-400" /> Cuaca BMKG
                 </p>
-                <p className="text-xs font-bold text-slate-200 mt-0.5">Cerah Berawan (30°C)</p>
+                <p className="text-xs font-bold text-slate-200 mt-0.5">Data cuaca unavailable</p>
               </div>
               <div className="p-2.5 bg-slate-900 border border-slate-700 rounded-xl">
                 <p className="text-[9px] text-slate-400">Kepadatan Gerbong</p>
-                <p className="text-xs font-bold text-emerald-400 mt-0.5">Kapasitas ~65%</p>
+                <p className="text-xs font-bold text-slate-400 mt-0.5">Data occupancy unavailable</p>
               </div>
             </div>
 
             {/* Explainable note */}
             <p className="text-[9px] text-slate-400 italic">
-              Data sinkron otomatis dengan GTFS Realtime & Community Reports setiap 15 detik.
+              {monitoring?.last_synced_at ? `Sinkron terakhir ${monitoring.last_synced_at}.` : 'GTFS Realtime belum terhubung; tidak ada angka simulasi yang ditampilkan.'}
             </p>
           </div>
         </div>
@@ -372,40 +364,21 @@ export default function JourneyPanel({
               <span className="text-xs font-black text-white">Transit Inter-Moda Assistant</span>
             </div>
             <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-lg font-bold">
-              Skybridge Connect
+              {intelObj?.transfer_assistant?.status || 'unavailable'}
             </span>
           </div>
 
           <div className="space-y-2">
-            <div className="p-2.5 bg-slate-900 border border-slate-700 rounded-xl space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-white">
-                <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center text-[9px] font-black">1</span>
-                <span>Turun di Peron 2 (Sisi Kanan)</span>
+            {intelObj?.transfer_assistant?.instructions?.length ? intelObj.transfer_assistant.instructions.map((instruction, index) => (
+              <div key={`${instruction}-${index}`} className="p-2.5 bg-slate-900 border border-slate-700 rounded-xl flex items-start gap-2">
+                <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center text-[9px] font-black shrink-0">{index + 1}</span>
+                <span className="text-[10px] text-slate-300">{instruction}</span>
               </div>
-              <p className="text-[10px] text-slate-400 pl-6">
-                Gunakan tangga atau lift prioritas di sisi tengah peron menuju lantai concourse.
+            )) : (
+              <p className="p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-[10px] text-slate-400">
+                Data transfer antarmoda belum tersedia untuk rute ini.
               </p>
-            </div>
-
-            <div className="p-2.5 bg-slate-900 border border-slate-700 rounded-xl space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-white">
-                <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center text-[9px] font-black">2</span>
-                <span>Lewati Skybridge Integrasi (2 Menit)</span>
-              </div>
-              <p className="text-[10px] text-slate-400 pl-6">
-                Jalur tertutup, bebas hujan & dilengkapi guiding block difabel menuju Halte BRT / LRT.
-              </p>
-            </div>
-
-            <div className="p-2.5 bg-slate-900 border border-slate-700 rounded-xl space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-white">
-                <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center text-[9px] font-black">3</span>
-                <span>Tap-In Gate Integrasi</span>
-              </div>
-              <p className="text-[10px] text-slate-400 pl-6">
-                Siapkan Kartu Uang Elektronik atau QRIS MAPID Pay dengan saldo minimal Rp 5.000.
-              </p>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -421,21 +394,21 @@ export default function JourneyPanel({
                   <Bell className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-black text-white">Arrival Reminder Aktif!</h4>
-                  <p className="text-[9px] text-red-200">Radius Pemicu 500 Meter dari Stasiun</p>
+                  <h4 className="text-xs font-black text-white">Arrival Reminder</h4>
+                  <p className="text-[9px] text-red-200">{arrivalRem?.status || 'unavailable'}</p>
                 </div>
               </div>
               <span className="text-xs font-mono font-black text-red-400 bg-red-950 px-2 py-0.5 rounded border border-red-700">
-                {distanceRemaining}m
+                {arrivalRem?.distance_meters != null ? `${arrivalRem.distance_meters}m` : '—'}
               </span>
             </div>
 
             <p className="text-[11px] text-slate-200 font-medium leading-tight">
-              🔔 <strong>Siapkan diri Anda!</strong> Kereta mendekati stasiun tujuan akhir. Amankan barang bawaan dan bersiap di dekat pintu keluar.
+              🔔 <strong>{arrivalRem?.message || 'Data posisi kendaraan belum tersedia.'}</strong>
             </p>
 
             <div className="flex items-center justify-between pt-1">
-              <span className="text-[9px] text-slate-400">Trigger: GTFS Realtime Posisi GPS</span>
+              <span className="text-[9px] text-slate-400">{arrivalRem?.data_source || 'GTFS_RT_UNAVAILABLE'}</span>
               <button
                 type="button"
                 onClick={() => setReminderActive(!reminderActive)}
@@ -458,25 +431,25 @@ export default function JourneyPanel({
                 <span className="text-xs font-black text-white">Exit Gate Recommendation</span>
               </div>
               <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-lg font-bold">
-                {exitRec?.recommended_exit || 'Exit Gate A'}
+                {exitRec?.recommended_exit || 'Exit unavailable'}
               </span>
             </div>
 
             <div className="p-2.5 bg-slate-900 border border-slate-700 rounded-xl space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-white">
-                  {exitRec?.target_street || 'Jl. M.H. Thamrin (Arah Plaza Indonesia)'}
+                  {exitRec?.target_street || 'Target coordinates unavailable'}
                 </span>
                 <span className="text-[8px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold border border-emerald-500/30">
-                  ♿ Aksesibel
+                  {exitRec?.is_accessible ? '♿ Aksesibel' : 'Aksesibilitas unavailable'}
                 </span>
               </div>
               <p className="text-[10px] text-slate-300 leading-relaxed">
-                {exitRec?.reason || 'Paling dekat dengan trotoar penyeberangan aman, halte integrasi busway, dan lift prioritas.'}
+                {exitRec?.reason || 'Sistem belum dapat menghitung rekomendasi exit tanpa target koordinat dan data pintu keluar.'}
               </p>
               <div className="text-[9px] text-slate-400 pt-1 border-t border-slate-800 flex justify-between">
-                <span>Metode: Nearest Facility Analysis</span>
-                <span>Akses: Ramp & Guiding Block</span>
+                <span>Metode: {exitRec?.analysis_method || 'Unavailable'}</span>
+                <span>Akses: {exitRec?.is_accessible == null ? 'Unavailable' : (exitRec.is_accessible ? 'Accessible' : 'Not accessible')}</span>
               </div>
             </div>
           </div>
@@ -493,7 +466,7 @@ export default function JourneyPanel({
           Semua rekomendasi dihitung oleh <strong>Transit Intelligence Engine</strong> menggunakan <em>Rule-Based Spatial Analysis</em> (Proximity, Nearest Facility, Spatial Relationship, Network Analysis). Data bersumber dari <strong>GEO MAPID, GTFS Realtime, & Community Reports</strong>.
         </p>
         <div className="text-[8px] text-slate-500 pt-0.5 flex items-center justify-between">
-          <span>Pembaruan Terakhir: Baru saja</span>
+          <span>Pembaruan Terakhir: {routeObj?.last_updated || 'Unavailable'}</span>
           <span>Bukan LLM / Chatbot (100% Explainable)</span>
         </div>
       </div>

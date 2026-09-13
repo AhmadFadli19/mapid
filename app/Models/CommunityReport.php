@@ -20,11 +20,15 @@ class CommunityReport extends Model
         'photo_url',
         'latitude',
         'longitude',
+        'verified_by',
+        'verified_at',
+        'verification_notes',
     ];
 
     protected $casts = [
         'latitude' => 'float',
         'longitude' => 'float',
+        'verified_at' => 'datetime',
     ];
 
     public function station()

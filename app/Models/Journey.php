@@ -16,11 +16,29 @@ class Journey extends Model
         'start_time',
         'estimated_arrival',
         'status',
+        'gtfs_trip_id',
+        'current_stage',
+        'current_stop_id',
+        'delay_seconds',
+        'last_position_lat',
+        'last_position_lon',
+        'last_synced_at',
+        'reminder_sent_at',
+        'data_source',
+        'data_quality',
+        'route_payload',
+        'guest_token',
     ];
 
     protected $casts = [
         'start_time' => 'datetime',
         'estimated_arrival' => 'datetime',
+        'last_synced_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
+        'delay_seconds' => 'integer',
+        'last_position_lat' => 'float',
+        'last_position_lon' => 'float',
+        'route_payload' => 'array',
     ];
 
     public function user()

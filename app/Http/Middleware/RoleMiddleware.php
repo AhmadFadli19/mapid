@@ -16,6 +16,9 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, string $role): Response
     {
         if (!Auth::check()) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
+            }
             return redirect()->route('login.user');
         }
 
@@ -29,6 +32,9 @@ class RoleMiddleware
         ];
 
         if (!isset($allowedRoles[$role]) || $user->role_id !== $allowedRoles[$role]) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized access'], 403);
+            }
             abort(403, 'Unauthorized access');
         }
 

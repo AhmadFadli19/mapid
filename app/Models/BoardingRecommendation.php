@@ -16,6 +16,10 @@ class BoardingRecommendation extends Model
         'reason',
         'nearest_exit',
         'walking_time_seconds',
+        'platform_position',
+        'exit_gate_id',
+        'walking_distance_meters',
+        'analysis_method',
     ];
 
     public function station()
@@ -27,4 +31,9 @@ class BoardingRecommendation extends Model
     {
         return $this->belongsTo(Station::class, 'destination_station_id');
     }
+
+    protected $casts = [
+        'walking_time_seconds' => 'integer',
+        'walking_distance_meters' => 'float',
+    ];
 }

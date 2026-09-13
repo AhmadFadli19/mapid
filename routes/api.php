@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MapidController;
+use App\Http\Controllers\Api\TransitController;
+use App\Http\Controllers\Api\FacilityFinderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,7 +24,7 @@ Route::get('/stations/{id}', [MapidController::class, 'getStationProfile']);
 Route::get('/stations/{id}/routes', [MapidController::class, 'getStationRoutes']);
 
 // Route Planning & Transit Intelligence
-Route::match(['get', 'post'], '/route/plan', [MapidController::class, 'planRoute']);
+Route::match(['get', 'post'], '/route/plan', [TransitController::class, 'planRoute']);
 
 // GeoJSON Feeds for MAPID MAPS
 Route::get('/transit/stations-geojson', [MapidController::class, 'getStationsGeoJson']);
@@ -30,8 +32,7 @@ Route::get('/transit/routes-geojson', [MapidController::class, 'getRoutesGeoJson
 
 // Protected & Public Community Reports
 Route::get('/community-reports', [MapidController::class, 'getCommunityReports']);
-Route::post('/community-report', [MapidController::class, 'submitReport']);
-Route::post('/community-reports/{id}/verify', [MapidController::class, 'verifyCommunityReport']);
+Route::middleware('throttle:6,1')->post('/community-report', [MapidController::class, 'submitReport']);
 
 // v1 API Route Group matching specification
 Route::prefix('v1')->group(function () {
@@ -39,10 +40,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/stations/{id}', [MapidController::class, 'getStationProfile']);
     Route::get('/stations/{id}/routes', [MapidController::class, 'getStationRoutes']);
     Route::get('/routes/geojson', [MapidController::class, 'getRoutesGeoJson']);
-    Route::match(['get', 'post'], '/route/plan', [MapidController::class, 'planRoute']);
+    Route::match(['get', 'post'], '/route/plan', [TransitController::class, 'planRoute']);
     Route::get('/community-reports', [MapidController::class, 'getCommunityReports']);
-    Route::post('/community-report', [MapidController::class, 'submitReport']);
-    Route::post('/community-reports/{id}/verify', [MapidController::class, 'verifyCommunityReport']);
+    Route::middleware('throttle:6,1')->post('/community-report', [MapidController::class, 'submitReport']);
 
     // Gemini AI Transit Intelligence Assistant & Autonomous Enrichment
     Route::post('/ai/assistant', [MapidController::class, 'askGeminiAi']);
@@ -53,7 +53,12 @@ Route::prefix('v1')->group(function () {
     Route::get('/geoserver/layers', [MapidController::class, 'getGeoServerLayers']);
 
     // Facility Finder (Spatial POI Query)
-    Route::get('/facilities/search', [MapidController::class, 'getFacilityFinder']);
+    Route::get('/facilities/search', [FacilityFinderController::class, 'search']);
+    Route::get('/transit/realtime', [TransitController::class, 'getRealtime']);
+    Route::post('/journeys', [TransitController::class, 'createJourney']);
+    Route::get('/journeys/{journey}', [TransitController::class, 'getJourney']);
+    Route::patch('/journeys/{journey}/stage', [TransitController::class, 'updateJourneyStage']);
+    Route::post('/journeys/{journey}/complete', [TransitController::class, 'completeJourney']);
 
     // MAPID Apps Data Integration: Menu Go & Struk Go
     Route::get('/stations/{id}/menu-go', [MapidController::class, 'getMenuGo']);
@@ -77,4 +82,5 @@ Route::prefix('v1')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::middleware('role:admin')->post('/v1/community-reports/{id}/verify', [MapidController::class, 'verifyCommunityReport']);
 });

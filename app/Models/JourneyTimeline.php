@@ -18,12 +18,23 @@ class JourneyTimeline extends Model
         'latitude',
         'longitude',
         'status',
+        'station_id',
+        'gtfs_stop_id',
+        'route_id',
+        'route_name',
+        'arrival_time',
+        'departure_time',
+        'transfer_at',
+        'distance_meters',
     ];
 
     protected $casts = [
         'step_order' => 'integer',
         'latitude' => 'float',
         'longitude' => 'float',
+        'arrival_time' => 'datetime',
+        'departure_time' => 'datetime',
+        'distance_meters' => 'float',
     ];
 
     public function journey()

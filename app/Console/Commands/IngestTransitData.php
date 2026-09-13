@@ -35,6 +35,7 @@ class IngestTransitData extends Command
             $this->info("Downloading and processing GTFS feeds...");
             $res = $gtfsService->ingestTransJakartaGtfs();
             $this->info("GTFS Status: " . ($res['message'] ?? 'Done'));
+            if (($res['status'] ?? null) !== 'success') return self::FAILURE;
         }
 
         if ($mode === 'weather' || $mode === 'all') {

@@ -35,6 +35,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  const guestToken = localStorage.getItem('pandu_guest_journey_token') || sessionStorage.getItem('pandu_guest_journey_token');
+  if (guestToken && String(config.url || '').includes('/v1/journeys/')) {
+    config.headers['X-Guest-Token'] = guestToken;
+  }
   return config;
 });
 

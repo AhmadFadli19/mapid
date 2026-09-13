@@ -182,12 +182,6 @@ export default function WebGisHeader({ user, onLogout, activePersona, onSelectPe
                 <span className="text-slate-400 font-mono text-[9px] hidden 2xl:inline">f776...ff8d</span>
               </div>
 
-              {/* GTFS Live Indicator */}
-              <div className="hidden xl:flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/80 px-2.5 py-1.5 rounded-xl text-[10px]">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="text-slate-300 font-semibold">GTFS RT Live</span>
-              </div>
-
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

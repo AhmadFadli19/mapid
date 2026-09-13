@@ -8,10 +8,14 @@ import {
 
 const trainCars = Array.from({ length: 12 }, (_, i) => i + 1);
 
+function isRecForCar(car, recommendation) {
+  return Boolean(recommendation?.recommended_car && String(recommendation.recommended_car).includes(String(car)));
+}
+
 export default function BoardingRecommendationPage() {
   const [stations, setStations] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
-  const [activeCar, setActiveCar] = useState(2);
+  const [activeCar, setActiveCar] = useState(null);
 
   useEffect(() => {
     fetchStations();
@@ -22,19 +26,13 @@ export default function BoardingRecommendationPage() {
       const res = await api.get('/stations');
       if (res.data?.data?.length > 0) {
         setStations(res.data.data);
-        setSelectedStation(res.data.data[0]);
       }
     } catch (err) {
       console.error(err);
     }
   };
 
-  const boardingRec = selectedStation?.boarding_recommendation || {
-    recommended_car: 'Gerbong 2 atau Pintu Depan (A)',
-    reason: `Sejajar langsung dengan tangga eskalator concourse & lift difabel di ${selectedStation?.name || 'stasiun tujuan'}.`,
-    nearest_exit: 'Exit Gate A',
-    walking_time_seconds: 65
-  };
+  const boardingRec = selectedStation?.boarding_recommendation || null;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6 pb-16 text-slate-100 font-sans">
@@ -95,7 +93,7 @@ export default function BoardingRecommendationPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  Gerbong Rekomendasi: <strong className="text-emerald-300">Gerbong 2 atau 7</strong>
+                  Gerbong Rekomendasi: <strong className="text-emerald-300">{st.boarding_recommendation?.recommended_car || 'Unavailable'}</strong>
                 </p>
               </div>
             ))}
@@ -112,10 +110,10 @@ export default function BoardingRecommendationPage() {
                 <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
                   Analisis Spasial Gerbong
                 </span>
-                <h3 className="text-base font-black text-white">{selectedStation?.name || 'Stasiun Bundaran HI'}</h3>
+                <h3 className="text-base font-black text-white">{selectedStation?.name || 'Pilih stasiun'}</h3>
               </div>
               <span className="text-xs font-black bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl shadow-md shadow-emerald-500/30">
-                {boardingRec.recommended_car}
+                {boardingRec?.recommended_car || 'Unavailable'}
               </span>
             </div>
 
@@ -125,11 +123,11 @@ export default function BoardingRecommendationPage() {
                 💡 Alasan Rekomendasi (Explainability First):
               </h4>
               <p className="text-xs text-slate-200 leading-relaxed">
-                {boardingRec.reason}
+                {boardingRec?.reason || 'Rekomendasi boarding belum tersedia untuk stasiun ini.'}
               </p>
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-emerald-800/30 text-[10px] text-slate-400">
-                <div>Pintu Keluar Terdekat: <strong className="text-white">{boardingRec.nearest_exit}</strong></div>
-                <div>Estimasi Jalan Kaki: <strong className="text-white">~{boardingRec.walking_time_seconds} detik</strong></div>
+                <div>Pintu Keluar Terdekat: <strong className="text-white">{boardingRec?.nearest_exit || 'Unavailable'}</strong></div>
+                <div>Estimasi Jalan Kaki: <strong className="text-white">{boardingRec?.walking_time_seconds != null ? `~${boardingRec.walking_time_seconds} detik` : 'Unavailable'}</strong></div>
               </div>
             </div>
 
@@ -144,7 +142,7 @@ export default function BoardingRecommendationPage() {
 
               <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 pt-1">
                 {trainCars.map((car) => {
-                  const isRec = car === 2 || car === 7;
+                  const isRec = Boolean(boardingRec?.recommended_car && String(boardingRec.recommended_car).includes(String(car)));
                   const isSelected = activeCar === car;
 
                   return (
@@ -176,9 +174,11 @@ export default function BoardingRecommendationPage() {
                 Analisis Posisi Gerbong {activeCar}:
               </h4>
               <p className="text-xs text-slate-300 leading-relaxed">
-                {activeCar === 2 || activeCar === 7
-                  ? `Gerbong ${activeCar} adalah gerbong paling strategis. Begitu pintu kereta terbuka, posisi pintu sejajar dengan tangga naik/turun peron dan lift prioritas.`
-                  : `Gerbong ${activeCar} berjarak sekitar ${(Math.abs(activeCar - 2) * 20)} meter dari tangga transit. Anda memerlukan waktu berjalan kaki tambahan sekitar ${Math.abs(activeCar - 2) * 25} detik saat turun.`}
+                {activeCar && isRecForCar(activeCar, boardingRec)
+                  ? `Gerbong ${activeCar} ditandai oleh rekomendasi data stasiun.`
+                  : activeCar
+                  ? 'Tidak ada analisis posisi tambahan untuk gerbong ini.'
+                  : 'Pilih gerbong untuk melihat status rekomendasi data.'}
               </p>
             </div>
 

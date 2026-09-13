@@ -117,15 +117,15 @@ export default function StationProfilePage() {
                 <span className="text-xs font-bold px-3 py-1 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-full">
                   {station.operator || 'Transit Operator'}
                 </span>
-                <h2 className="text-2xl font-black text-white mt-2">{station.name || 'Nama Stasiun'}</h2>
+                <h2 className="text-2xl font-black text-white mt-2">{station.name || 'Nama stasiun unavailable'}</h2>
                 <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-red-400" /> {station.address || 'Jakarta Timur'}
+                  <MapPin className="w-3.5 h-3.5 text-red-400" /> {station.address || 'Address unavailable'}
                 </p>
               </div>
 
               <div className="bg-slate-900/80 px-4 py-3 rounded-2xl border border-slate-700/60 text-right">
                 <span className="text-[10px] text-slate-400 block">Kode Stasiun / Halte</span>
-                <span className="text-lg font-mono font-bold text-emerald-400">{station.code || 'ID-01'}</span>
+                <span className="text-lg font-mono font-bold text-emerald-400">{station.code || 'Code unavailable'}</span>
               </div>
             </div>
 
@@ -179,26 +179,26 @@ export default function StationProfilePage() {
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                           fac.is_available !== false ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
                         }`}>
-                          {fac.status_note || (fac.is_available ? 'Berfungsi' : 'Tutup')}
+                          {fac.status_note || (fac.is_available ? 'Available' : 'Unavailable')}
                         </span>
                       </div>
 
                       <div className="text-[11px] text-slate-400 space-y-1">
                         <p className="flex items-center gap-1">
-                          <Tag className="w-3 h-3 text-blue-400" /> Kategori: {fac.category || 'Public Facility'}
+                          <Tag className="w-3 h-3 text-blue-400" /> Kategori: {fac.category || 'Category unavailable'}
                         </p>
                         <p className="flex items-center gap-1">
-                          <Building2 className="w-3 h-3 text-amber-400" /> Posisi / Lantai: {fac.floor || 'Lantai 1'}
+                          <Building2 className="w-3 h-3 text-amber-400" /> Posisi / Lantai: {fac.floor || 'Floor unavailable'}
                         </p>
                         <p className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-emerald-400" /> Jam Operasional: {fac.operating_hours || '05:00 - 22:00'}
+                          <Clock className="w-3 h-3 text-emerald-400" /> Jam Operasional: {fac.operating_hours || 'Unavailable'}
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="col-span-full bg-slate-900/40 p-4 rounded-2xl text-center text-xs text-slate-400">
-                    Toilet Umum, Mushola, & Guiding Block Difabel Berfungsi Normal.
+                    Data fasilitas belum tersedia dari sumber terverifikasi.
                   </div>
                 )}
               </div>
@@ -214,8 +214,8 @@ export default function StationProfilePage() {
                   exits.map((ex) => (
                     <div key={ex.id} className="bg-slate-900/60 border border-slate-700/50 p-3 rounded-2xl flex items-center justify-between">
                       <div>
-                        <h5 className="text-xs font-bold text-slate-200">{ex.gate_name || ex.name || 'Exit Gate A'}</h5>
-                        <p className="text-[10px] text-slate-400">Target: {ex.target_street || ex.nearest_road || 'Trotoar Utama'}</p>
+                        <h5 className="text-xs font-bold text-slate-200">{ex.gate_name || ex.name || 'Exit unavailable'}</h5>
+                        <p className="text-[10px] text-slate-400">Target: {ex.target_street || ex.nearest_road || 'Target unavailable'}</p>
                       </div>
                       <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-md font-mono">
                         Aksesibel
@@ -224,7 +224,7 @@ export default function StationProfilePage() {
                   ))
                 ) : (
                   <div className="col-span-full bg-slate-900/40 p-3 rounded-2xl text-center text-xs text-slate-400">
-                    Exit Gate A terhubung langsung ke trotoar penyeberangan aman & ramp difabel.
+                    Data exit gate belum tersedia dari sumber terverifikasi.
                   </div>
                 )}
               </div>

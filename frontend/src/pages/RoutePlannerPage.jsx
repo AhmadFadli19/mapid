@@ -19,12 +19,6 @@ export default function RoutePlannerPage() {
       const data = res.data?.data || [];
       if (data.length > 0) {
         setStations(data);
-        setOriginId(data[0].id);
-        if (data.length > 1) {
-          setDestId(data[1].id);
-        } else {
-          setDestId(data[0].id);
-        }
       }
     } catch (err) {
       console.error('Fetch stations failed:', err);
@@ -84,6 +78,7 @@ export default function RoutePlannerPage() {
                 onChange={(e) => setOriginId(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-3 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 font-semibold"
               >
+                <option value="">Pilih stasiun asal...</option>
                 {stations.map((st) => (
                   <option key={`orig-${st.id}`} value={st.id}>{st.name} ({st.operator})</option>
                 ))}
@@ -97,6 +92,7 @@ export default function RoutePlannerPage() {
                 onChange={(e) => setDestId(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-3 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 font-semibold"
               >
+                <option value="">Pilih stasiun tujuan...</option>
                 {stations.map((st) => (
                   <option key={`dest-${st.id}`} value={st.id}>{st.name} ({st.operator})</option>
                 ))}
@@ -137,7 +133,7 @@ export default function RoutePlannerPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-400">Jarak Spasial</p>
-                      <p className="text-xs font-bold text-slate-100">{routeObj.distance_km || 4.25} km</p>
+                      <p className="text-xs font-bold text-slate-100">{routeObj.distance_km != null ? `${routeObj.distance_km} km` : 'Unavailable'}</p>
                     </div>
                   </div>
 
@@ -147,7 +143,7 @@ export default function RoutePlannerPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-400">Estimasi Waktu</p>
-                      <p className="text-xs font-bold text-slate-100">{routeObj.estimated_duration_minutes || 12} Menit</p>
+                      <p className="text-xs font-bold text-slate-100">{routeObj.estimated_duration_minutes != null ? `${routeObj.estimated_duration_minutes} Menit` : 'Unavailable'}</p>
                     </div>
                   </div>
 
@@ -157,7 +153,7 @@ export default function RoutePlannerPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-400">Estimasi Tarif</p>
-                      <p className="text-xs font-bold text-slate-100">Rp {(routeObj.total_fare || 3500).toLocaleString('id-ID')}</p>
+                      <p className="text-xs font-bold text-slate-100">{routeObj.total_fare != null ? `Rp ${Number(routeObj.total_fare).toLocaleString('id-ID')}` : 'Unavailable'}</p>
                     </div>
                   </div>
                 </div>

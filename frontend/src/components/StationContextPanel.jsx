@@ -138,15 +138,11 @@ export default function StationContextPanel({
     }
   };
 
-  const stationName = selectedStation?.name || 'Stasiun Bundaran HI';
-  const stationCode = selectedStation?.code || 'BHI';
-  const stationOperator = selectedStation?.operator || 'MRT Jakarta';
-  const stationAddress = selectedStation?.address || 'Jl. M.H. Thamrin, Menteng, Jakarta Pusat';
-  const stationExits = selectedStation?.exits || [
-    { id: 1, gate_name: 'Exit Gate A (Plaza Indonesia)', target_street: 'Jl. M.H. Thamrin Sisi Barat', is_accessible: true, nearest_poi: 'Plaza Indonesia & Halte BRT' },
-    { id: 2, gate_name: 'Exit Gate B (Grand Indonesia)', target_street: 'Jl. Teluk Betung', is_accessible: true, nearest_poi: 'Grand Indonesia Mall' },
-    { id: 3, gate_name: 'Exit Gate C (Sarinah)', target_street: 'Jl. M.H. Thamrin Sisi Timur', is_accessible: false, nearest_poi: 'Gedung Kedutaan & Sarinah' },
-  ];
+  const stationName = selectedStation?.name || 'Pilih stasiun';
+  const stationCode = selectedStation?.code || 'Code unavailable';
+  const stationOperator = selectedStation?.operator || 'Operator unavailable';
+  const stationAddress = selectedStation?.address || 'Address unavailable';
+  const stationExits = selectedStation?.exits || [];
 
   return (
     <div className="flex flex-col h-full overflow-hidden text-slate-100 font-sans">
@@ -158,7 +154,7 @@ export default function StationContextPanel({
             {stationOperator} • {stationCode}
           </span>
           <span className="text-[9px] text-slate-400 flex items-center gap-1">
-            <Clock className="w-3 h-3 text-emerald-400" /> Jam Buka: 05.00 - 24.00
+            <Clock className="w-3 h-3 text-emerald-400" /> Jam buka: {selectedStation?.operating_hours || 'Unavailable'}
           </span>
         </div>
 
@@ -175,7 +171,7 @@ export default function StationContextPanel({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
             </span>
             <span className="text-[9px] text-cyan-300 font-bold truncate">
-              Gemini 3.6 Flash AI Verified
+              AI optional · official data not auto-written
             </span>
           </div>
 
@@ -183,7 +179,7 @@ export default function StationContextPanel({
             onClick={handleTriggerAiEnrichment}
             disabled={isEnrichingAi}
             className="text-[9px] bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-bold px-2.5 py-1 rounded-lg transition flex items-center gap-1 shrink-0 cursor-pointer disabled:opacity-50 shadow-sm shadow-cyan-600/20"
-            title="Klik untuk memperbarui fasilitas, gerbong, dan akses stasiun secara otomatis menggunakan Gemini AI terbaru"
+            title="AI tidak mengubah data resmi secara otomatis; gunakan data terverifikasi MAPID"
           >
             {isEnrichingAi ? (
               <>
@@ -193,7 +189,7 @@ export default function StationContextPanel({
             ) : (
               <>
                 <Sparkles className="w-3 h-3 text-cyan-200" />
-                <span>Update AI Cerdas</span>
+                <span>AI optional</span>
               </>
             )}
           </button>
@@ -378,8 +374,8 @@ export default function StationContextPanel({
                       )}
 
                       <div className="flex items-center justify-between text-[8px] text-slate-500 pt-1 border-t border-slate-700/40">
-                        <span>Pintu Keluar: <strong>{f.nearest_exit || 'Exit Gate A'}</strong></span>
-                        <span>Diperbarui: {f.last_updated || '15 mnt lalu'}</span>
+                        <span>Pintu Keluar: <strong>{f.nearest_exit || 'Exit data unavailable'}</strong></span>
+                        <span>Diperbarui: {f.last_updated || 'Timestamp unavailable'}</span>
                       </div>
                     </div>
                   );
@@ -396,6 +392,7 @@ export default function StationContextPanel({
               Daftar pintu keluar resmi berdasarkan analisis spasial kedekatan dengan moda lanjutan dan trotoar.
             </p>
 
+            {stationExits.length === 0 ? <div className="p-4 text-center text-xs text-slate-400 bg-slate-900/60 rounded-xl border border-slate-800">Data exit gate belum tersedia dari sumber terverifikasi.</div> : null}
             {stationExits.map((exit, idx) => (
               <div
                 key={exit.id || idx}
@@ -413,10 +410,10 @@ export default function StationContextPanel({
                   )}
                 </div>
                 <p className="text-[10px] text-slate-300">
-                  🎯 Menuju: <strong>{exit.target_street || exit.nearest_poi}</strong>
+                  🎯 Menuju: <strong>{exit.target_street || exit.nearest_poi || 'Target unavailable'}</strong>
                 </p>
                 <p className="text-[9px] text-slate-400">
-                  Interkoneksi: Trotoar aman, Halte Integrasi TransJakarta, & Jalur Sepeda.
+                  {exit.integration_info || 'Informasi interkoneksi belum tersedia.'}
                 </p>
               </div>
             ))}

@@ -93,11 +93,46 @@ const MAP_STYLES = {
   }
 };
 
+const getRoutePlanPoints = (routePlan) => {
+  if (!routePlan) return [];
+  const points = [];
+  const seenStops = new Set();
+  const addPoint = (point, kind, legIndex = null, leg = null) => {
+    if (!point || point.latitude == null || point.longitude == null) return;
+    const key = `${kind}-${point.id || point.name}-${point.latitude}-${point.longitude}`;
+    if (kind === 'stop' && seenStops.has(key)) return;
+    if (kind === 'stop') seenStops.add(key);
+    points.push({ ...point, kind, legIndex, leg });
+  };
+
+  addPoint(routePlan.origin, 'origin');
+  (routePlan.legs || []).forEach((leg, legIndex) => {
+    (leg.stops || []).forEach((stop, stopIndex) => addPoint({ ...stop, stopIndex }, 'stop', legIndex, leg));
+  });
+  addPoint(routePlan.destination, 'destination');
+  return points;
+};
+
+const fitMapToRoutePlan = (map, routePlan, selectedRouteId = null) => {
+  const features = routePlan?.map?.features || [];
+  const visibleFeatures = selectedRouteId
+    ? features.filter((feature) => feature.properties?.route_id === selectedRouteId)
+    : features;
+  const coordinates = visibleFeatures.flatMap((feature) => feature.geometry?.coordinates || []);
+  if (coordinates.length < 2) return;
+
+  const bounds = new maplibregl.LngLatBounds();
+  coordinates.forEach((coordinate) => bounds.extend(coordinate));
+  map.fitBounds(bounds, { padding: 54, maxZoom: 15.8, duration: 700, essential: true });
+};
+
 export default function WebGisMap({
   stations = [],
   selectedStation = null,
   stationRoutes = null,
   selectedRouteId = null,
+  routePlan = null,
+  routeFocusLegId = null,
   searchResults = [],
   onSelectStation = () => {},
   initialStyle = 'dark',
@@ -106,6 +141,7 @@ export default function WebGisMap({
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
+  const routeMarkersRef = useRef([]);
 
   const defaultCenter = [106.822894, -6.193125]; // [lng, lat] for MapLibre
   const [currentStyle, setCurrentStyle] = useState(MAP_STYLES[initialStyle] ? initialStyle : 'dark');
@@ -129,7 +165,9 @@ export default function WebGisMap({
   }, []);
 
   const hasStationRoutes = stationRoutes?.features && stationRoutes.features.length > 0;
-  const activeFeatures = hasStationRoutes ? stationRoutes.features : fallbackRoutes;
+  const routePlanFeatures = routePlan?.map?.features || [];
+  const hasRoutePlan = routePlanFeatures.length > 0;
+  const activeFeatures = hasRoutePlan ? routePlanFeatures : hasStationRoutes ? stationRoutes.features : fallbackRoutes;
 
   // Initialize MapLibre GL Map
   useEffect(() => {
@@ -210,11 +248,14 @@ export default function WebGisMap({
 
       // Fetch & Add MAPID GeoServer Halte & Stasiun Layer (Jakarta Timur 2025)
       fetchGeoServerGeoJson(map);
+      fitMapToRoutePlan(map, routePlan, routeFocusLegId);
     });
 
     return () => {
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
+      routeMarkersRef.current.forEach(m => m.remove());
+      routeMarkersRef.current = [];
       map.remove();
     };
   }, []);
@@ -268,7 +309,35 @@ export default function WebGisMap({
         features: activeFeatures
       });
     }
-  }, [activeFeatures, selectedRouteId, hasStationRoutes]);
+  }, [activeFeatures, selectedRouteId, hasStationRoutes, hasRoutePlan]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !map.getLayer('routes-line-layer')) return;
+
+    map.setPaintProperty('routes-glow-layer', 'line-opacity', selectedRouteId
+      ? ['case', ['==', ['get', 'route_id'], selectedRouteId], 0.5, 0]
+      : 0);
+    map.setPaintProperty('routes-line-layer', 'line-width', [
+      'case',
+      ['==', ['get', 'route_id'], selectedRouteId || ''],
+      7,
+      hasRoutePlan ? 4.5 : hasStationRoutes ? 5 : 3.5
+    ]);
+    map.setPaintProperty('routes-line-layer', 'line-opacity', selectedRouteId
+      ? ['case', ['==', ['get', 'route_id'], selectedRouteId], 0.98, 0.18]
+      : hasRoutePlan ? 0.9 : hasStationRoutes ? 0.9 : 0.75);
+  }, [selectedRouteId, hasRoutePlan, hasStationRoutes]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !routePlan) return undefined;
+
+    const fit = () => fitMapToRoutePlan(map, routePlan, routeFocusLegId);
+    if (map.isStyleLoaded()) fit();
+    else map.once('load', fit);
+    return () => map.off('load', fit);
+  }, [routePlan, routeFocusLegId]);
 
   // Render & Update Markers on Map
   useEffect(() => {
@@ -433,6 +502,54 @@ export default function WebGisMap({
       markersRef.current.push(marker);
     });
   }, [stations, selectedStation, searchResults]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !routePlan) return undefined;
+
+    const renderRouteMarkers = () => {
+      routeMarkersRef.current.forEach((marker) => marker.remove());
+      routeMarkersRef.current = [];
+      const points = getRoutePlanPoints(routePlan);
+      const routeColors = new Map((routePlan.map?.features || []).map((feature) => [feature.properties?.route_id, feature.properties?.color || '#2563eb']));
+
+      points.forEach((point) => {
+        const color = point.kind === 'origin' ? '#2563eb' : point.kind === 'destination' ? '#ea580c' : (routeColors.get(point.leg?.route_id) || '#64748b');
+        const el = document.createElement('div');
+        el.setAttribute('aria-label', point.name || 'Route stop');
+        el.style.cssText = `width:${point.kind === 'stop' ? 14 : 24}px;height:${point.kind === 'stop' ? 14 : 24}px;border-radius:50%;background:${color};border:${point.kind === 'stop' ? '3px solid #fff' : '3px solid #fff'};box-shadow:0 2px 10px rgba(15,23,42,.38);display:flex;align-items:center;justify-content:center;color:#fff;font:800 11px system-ui,sans-serif;cursor:pointer;`;
+        if (point.kind === 'origin') el.textContent = 'A';
+        if (point.kind === 'destination') el.textContent = 'B';
+
+        const popupNode = document.createElement('div');
+        popupNode.style.cssText = 'font-family:system-ui,sans-serif;color:#0f172a;min-width:170px;padding:2px;';
+        const title = document.createElement('strong');
+        title.textContent = point.name || 'Route point';
+        title.style.cssText = 'display:block;font-size:13px;margin-bottom:4px;';
+        popupNode.appendChild(title);
+        const detail = document.createElement('span');
+        detail.textContent = point.kind === 'stop'
+          ? `${point.leg?.mode || 'Transit'} · ${point.arrival_time || point.departure_time || 'Jadwal belum tersedia'}`
+          : point.kind === 'origin' ? 'Titik keberangkatan' : 'Titik tujuan';
+        detail.style.cssText = 'display:block;color:#64748b;font-size:11px;line-height:1.4;';
+        popupNode.appendChild(detail);
+
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([point.longitude, point.latitude])
+          .setPopup(new maplibregl.Popup({ offset: 12, closeButton: false }).setDOMContent(popupNode))
+          .addTo(map);
+        routeMarkersRef.current.push(marker);
+      });
+    };
+
+    if (map.isStyleLoaded()) renderRouteMarkers();
+    else map.once('load', renderRouteMarkers);
+    return () => {
+      map.off('load', renderRouteMarkers);
+      routeMarkersRef.current.forEach((marker) => marker.remove());
+      routeMarkersRef.current = [];
+    };
+  }, [routePlan]);
 
   // Recenter map on selectedStation changes with 3D camera flyTo animation
   useEffect(() => {

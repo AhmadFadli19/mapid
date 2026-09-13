@@ -403,6 +403,153 @@
   box-shadow: var(--shadow);
 }
 
+.pandu-route-map-card {
+  margin-top: 22px;
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+
+.pandu-route-map-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.pandu-route-map-header h2 {
+  margin: 12px 0 5px;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+}
+
+.pandu-route-map-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pandu-route-map-content {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.pandu-route-map-viewport {
+  min-width: 0;
+  height: 390px;
+  overflow: hidden;
+  position: relative;
+  background: #dbeafe;
+  border-radius: 19px;
+}
+
+.pandu-route-leg-list {
+  min-width: 0;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 19px;
+}
+
+.pandu-route-leg-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 3px;
+}
+
+.pandu-route-leg-list-heading > span:last-child {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pandu-route-leg {
+  width: 100%;
+  padding: 11px 9px;
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) 14px;
+  gap: 9px;
+  align-items: start;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pandu-route-leg:hover,
+.pandu-route-leg.is-active {
+  background: var(--surface-blue);
+  border-color: color-mix(in srgb, var(--route-leg-color) 30%, var(--border));
+}
+
+.pandu-route-leg-swatch {
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  display: block;
+  background: var(--route-leg-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--route-leg-color) 14%, transparent);
+}
+
+.pandu-route-leg-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.pandu-route-leg-copy strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pandu-route-leg-copy span,
+.pandu-route-leg-copy small,
+.pandu-route-map-source {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.pandu-route-leg > svg {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.pandu-route-transfer-note {
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--orange);
+  background: var(--surface-orange);
+  border-radius: 9px;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.pandu-route-map-source {
+  margin-top: auto;
+}
+
 .pandu-map-card-header {
   display: flex;
   align-items: flex-start;
@@ -945,6 +1092,163 @@
   font-weight: 700;
 }
 
+.pandu-route-station-sequence {
+  max-height: 214px;
+  margin-top: 18px;
+  padding-right: 8px;
+  overflow-y: auto;
+  scrollbar-color: var(--blue) transparent;
+}
+
+.pandu-route-sequence-header,
+.pandu-route-leg-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pandu-route-sequence-header {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.pandu-route-sequence-header > span:last-child {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.pandu-route-leg-block + .pandu-route-leg-block {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid color-mix(in srgb, var(--blue) 14%, transparent);
+}
+
+.pandu-route-leg-heading {
+  min-width: 0;
+}
+
+.pandu-route-leg-heading strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pandu-route-leg-heading small {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pandu-route-leg-heading .pandu-route-leg-swatch {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin: 0;
+}
+
+.pandu-route-station-list {
+  margin-top: 6px;
+}
+
+.pandu-route-station-row {
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 15px 56px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  position: relative;
+}
+
+.pandu-route-station-marker {
+  width: 9px;
+  height: 9px;
+  margin: 4px 0 0 2px;
+  display: block;
+  position: relative;
+  z-index: 1;
+  background: var(--surface-blue);
+  border: 2px solid var(--route-leg-color);
+  border-radius: 50%;
+}
+
+.pandu-route-station-row:not(:last-child) .pandu-route-station-marker::after {
+  content: '';
+  width: 2px;
+  height: 29px;
+  position: absolute;
+  top: 7px;
+  left: 2px;
+  background: color-mix(in srgb, var(--route-leg-color) 45%, transparent);
+}
+
+.pandu-route-station-time {
+  color: var(--blue);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.pandu-route-station-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.pandu-route-station-copy strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pandu-route-station-copy small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.pandu-route-station-row.is-origin .pandu-route-station-copy small,
+.pandu-route-station-row.is-current .pandu-route-station-copy small {
+  color: var(--blue);
+}
+
+.pandu-route-station-row.is-destination .pandu-route-station-copy small {
+  color: var(--orange);
+}
+
+.pandu-route-station-row.is-current {
+  margin-left: -5px;
+  padding: 3px 5px;
+  background: color-mix(in srgb, var(--blue) 9%, transparent);
+  border-radius: 8px;
+}
+
+.pandu-route-transfer-inline {
+  margin: 6px 0 5px 23px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--orange);
+  font-size: 8px;
+}
+
+.pandu-route-sequence-note {
+  display: block;
+  margin: 5px 0 0 23px;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
 .pandu-route-timeline {
   width: 300px;
   margin-top: 24px;
@@ -989,10 +1293,9 @@
 }
 
 .pandu-route-note {
-  position: absolute;
-  top: 157px;
-  left: 360px;
-  right: 30px;
+  position: static;
+  margin-top: 10px;
+  padding-right: 360px;
   color: var(--muted);
   font-size: 12px;
 }
@@ -1569,6 +1872,42 @@
     border-radius: 20px;
   }
 
+  .pandu-route-map-card {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .pandu-route-map-header {
+    gap: 10px;
+  }
+
+  .pandu-route-map-header h2 {
+    margin-top: 10px;
+    font-size: 17px;
+  }
+
+  .pandu-route-map-header p {
+    max-width: 245px;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .pandu-route-map-content {
+    display: block;
+  }
+
+  .pandu-route-map-viewport {
+    height: 300px;
+    border-radius: 15px;
+  }
+
+  .pandu-route-leg-list {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 15px;
+  }
+
   .pandu-map-card-header {
     gap: 10px;
   }
@@ -1792,6 +2131,20 @@
     font-size: 11px;
   }
 
+  .pandu-route-station-sequence {
+    max-height: 208px;
+    margin-top: 16px;
+  }
+
+  .pandu-route-leg-heading {
+    flex-wrap: wrap;
+  }
+
+  .pandu-route-leg-heading small {
+    width: calc(100% - 15px);
+    margin-left: 15px;
+  }
+
   .pandu-route-timeline {
     width: 100%;
     margin-top: 20px;
@@ -1800,6 +2153,7 @@
   .pandu-route-note {
     position: static;
     margin-top: 8px;
+    padding-right: 0;
     font-size: 10px;
   }
 

@@ -32,21 +32,10 @@ import avatar from '../assets/figma/panduyuk-avatar.svg';
 import toggleKnob from '../assets/figma/panduyuk-toggle-knob.svg';
 import station from '../assets/figma/panduyuk-station.svg';
 import stationDestination from '../assets/figma/panduyuk-station-destination.svg';
-import routeStop from '../assets/figma/panduyuk-route-stop.svg';
-import routeDestination from '../assets/figma/panduyuk-route-destination.svg';
 import timelineDone from '../assets/figma/panduyuk-timeline-done.svg';
 import timelineNext from '../assets/figma/panduyuk-timeline-next.svg';
-import timelineSoon from '../assets/figma/panduyuk-timeline-soon.svg';
 import timelineLater from '../assets/figma/panduyuk-timeline-later.svg';
 import './PanduYukExperience.css';
-
-const FALLBACK_STATIONS = [
-  { id: 142, code: 'BHI', name: 'Stasiun Bundaran HI', operator: 'MRT Jakarta', line_color: '#0284c7', latitude: -6.193125, longitude: 106.822894, address: 'Jl. M.H. Thamrin, Menteng, Jakarta Pusat' },
-  { id: 143, code: 'DKA', name: 'Stasiun Dukuh Atas BNI', operator: 'MRT Jakarta', line_color: '#0284c7', latitude: -6.200788, longitude: 106.822765, address: 'Jl. Jend. Sudirman, Setiabudi, Jakarta Selatan' },
-  { id: 146, code: 'MRI', name: 'Stasiun Manggarai', operator: 'KRL Commuter Line', line_color: '#16a34a', latitude: -6.2099, longitude: 106.8499, address: 'Tebet, Jakarta Selatan' },
-  { id: 147, code: 'HRM', name: 'Halte Harmoni Central', operator: 'TransJakarta', line_color: '#ea580c', latitude: -6.167382, longitude: 106.820251, address: 'Gambir, Jakarta Pusat' },
-  { id: 1, code: 'TJ_JT_1028', name: 'Halte Pasar Enjo', operator: 'TransJakarta', line_color: '#ea580c', latitude: -6.2148666, longitude: 106.8783037, address: 'Pisangan Timur, Jakarta Timur' },
-];
 
 const TRANSIT_LAYERS = [
   { id: 'ALL', label: 'All modes' },
@@ -61,17 +50,6 @@ const REPORT_TYPES = [
   { value: 'Tenant closed', label: 'Tenant closed', mobileLabel: 'Tenant' },
   { value: 'Crowded', label: 'Crowded', mobileLabel: 'Crowded' },
 ];
-
-const timelineItems = [
-  { time: '08:10', label: 'Depart Palmerah', status: 'Done', tone: 'done', icon: timelineDone },
-  { time: '08:24', label: 'Transfer at Dukuh Atas', status: 'Next', tone: 'next', icon: timelineNext },
-  { time: '08:28', label: 'Board car 3', status: 'Soon', tone: 'soon', icon: timelineSoon },
-  { time: '08:44', label: 'Exit at Bundaran HI', status: 'Later', tone: 'later', icon: timelineLater },
-];
-
-function stationLabel(station, fallback) {
-  return station?.name || fallback;
-}
 
 function preferredStation(stations) {
   return stations.find((item) => /bundaran hi/i.test(item.name || ''))
@@ -180,19 +158,21 @@ function StationSelector({ stations, value, onChange }) {
 
 function buildJourneyTimeline(journeyData) {
   const route = journeyData?.route;
-  const intelligence = journeyData?.transit_intelligence || {};
-  const originName = displayStationName(route?.origin?.name, 'Stasiun asal');
-  const destinationName = displayStationName(route?.destination?.name, 'Stasiun tujuan');
-  const boarding = intelligence.boarding_recommendation;
-  const arrival = intelligence.arrival_reminder;
-  const exit = intelligence.exit_recommendation;
-
-  return [
-    { time: 'Now', label: `Depart ${originName}`, status: 'Done', tone: 'done', icon: timelineDone },
-    { time: 'Next', label: boarding?.recommended_car ? `Board ${boarding.recommended_car}` : 'Board next service', status: 'Next', tone: 'next', icon: timelineNext },
-    { time: arrival?.trigger_distance_meters ? `${arrival.trigger_distance_meters} m` : 'Soon', label: `Prepare at ${destinationName}`, status: 'Soon', tone: 'soon', icon: timelineSoon },
-    { time: 'Exit', label: exit?.recommended_exit || 'Follow the recommended exit', status: 'Later', tone: 'later', icon: timelineLater },
-  ];
+  if (!route?.legs?.length) return [];
+  const items = [];
+  route.legs.forEach((leg, legIndex) => {
+    if (leg.transfer_at) items.push({ time: 'Transfer', label: `Transfer at ${leg.transfer_at}`, status: 'Next', tone: 'next', icon: timelineNext });
+    leg.stops.forEach((stop, stopIndex) => {
+      items.push({
+        time: stop.arrival_time || stop.departure_time || 'Schedule unavailable',
+        label: `${stopIndex === 0 ? 'Board' : stopIndex === leg.stops.length - 1 ? 'Arrive' : 'Pass'} ${stop.name}`,
+        status: legIndex === 0 && stopIndex === 0 ? 'Next' : 'Later',
+        tone: legIndex === 0 && stopIndex === 0 ? 'next' : 'later',
+        icon: stopIndex === leg.stops.length - 1 ? timelineDone : timelineLater,
+      });
+    });
+  });
+  return items;
 }
 
 function formatToday() {
@@ -279,7 +259,7 @@ function SearchJourneyCard({ onPlan }) {
         <span className="pandu-card-label desktop-only">Plan a journey</span>
         <span className="pandu-search-icon"><Search size={17} aria-hidden="true" /></span>
         <span className="pandu-search-placeholder mobile-only">Where are you going?</span>
-        <span className="pandu-search-route desktop-only">Stasiun Palmerah <span aria-hidden="true">→</span> Bundaran HI</span>
+        <span className="pandu-search-route desktop-only">No route selected yet</span>
       </div>
       <button type="button" className="pandu-primary-button pandu-search-button" onClick={onPlan} aria-label="Plan trip">
         <span className="desktop-only">Plan trip</span>
@@ -291,15 +271,15 @@ function SearchJourneyCard({ onPlan }) {
 
 function MiniTransitMap() {
   return (
-    <div className="pandu-mini-map" aria-label="Peta mini rute Palmerah ke Bundaran HI">
+    <div className="pandu-mini-map" aria-label="Peta mini transit">
       <span className="pandu-map-line pandu-map-line-a" />
       <span className="pandu-map-line pandu-map-line-b" />
       <span className="pandu-map-stop stop-one"><img src={station} alt="" /></span>
       <span className="pandu-map-stop stop-two"><img src={station} alt="" /></span>
       <span className="pandu-map-stop stop-three"><img src={stationDestination} alt="" /></span>
-      <span className="pandu-map-label label-one">Palmerah</span>
-      <span className="pandu-map-label label-two">Dukuh Atas</span>
-      <span className="pandu-map-label label-three">Bundaran HI</span>
+      <span className="pandu-map-label label-one">Origin</span>
+      <span className="pandu-map-label label-two">Transit</span>
+      <span className="pandu-map-label label-three">Destination</span>
     </div>
   );
 }
@@ -373,7 +353,7 @@ function PanduMapCard({ stations, onNavigate, compact = false }) {
   const hasRouteData = Boolean(stationRoutes?.total || stationRoutes?.features?.length);
   const syncLabel = lastSyncedAt
     ? `Synced ${lastSyncedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
-    : 'Waiting for live data';
+    : 'Waiting for map data';
 
   return (
     <section className={`pandu-map-card ${compact ? 'is-compact' : ''}`} aria-labelledby="pandu-map-title">
@@ -560,7 +540,7 @@ function ArrivalExitView({ onNavigate, onToast, journeyData }) {
   const destinationId = journeyData?.route?.destination?.id;
   const { station: destinationStation } = useStationDetails(destinationId);
   const alternatives = (destinationStation?.exits || []).filter((item) => item.gate_name !== exit?.recommended_exit);
-  const hasLiveData = Boolean(journeyData && arrival && exit);
+  const hasJourney = Boolean(journeyData);
 
   return (
     <div className="pandu-page pandu-subpage pandu-arrival-page">
@@ -570,23 +550,23 @@ function ArrivalExitView({ onNavigate, onToast, journeyData }) {
         <p className="pandu-lede">The next alert and the right exit, explained with the data behind them.</p>
       </div>
 
-      {!hasLiveData ? (
+      {!hasJourney ? (
         <ExplicitDataState title="Journey data belum tersedia" body="Plan a journey first so PanduYuk can show an arrival reminder and exit recommendation without guessing." actionLabel="Plan a journey" onAction={() => onNavigate('/route-planner')} />
       ) : (
         <>
           <section className="pandu-arrival-alert">
             <div className="pandu-alert-icon"><Gauge size={22} /></div>
-            <div><span className="pandu-card-label orange">GET READY</span><h2>{arrival.trigger_distance_meters || 500}m before {journeyData.route.destination.name}</h2><p>{arrival.message}</p><DataSourceNote source={arrival.data_source || 'GTFS Realtime'} timestamp={arrival.last_updated} /></div>
+            <div><span className="pandu-card-label orange">GET READY</span><h2>{arrival?.distance_meters != null ? `${Math.round(arrival.distance_meters)}m` : 'Arrival distance unavailable'} before {journeyData.route.destination.name}</h2><p>{arrival?.message || 'Arrival reminder unavailable because vehicle position data is not available.'}</p><DataSourceNote source={arrival?.data_source || 'GTFS Realtime'} timestamp={arrival?.last_updated} /></div>
           </section>
 
           <div className="pandu-arrival-grid-large">
-            <section className="pandu-exit-recommendation">
+            {exit ? <section className="pandu-exit-recommendation">
               <span className="pandu-card-label blue">RECOMMENDED EXIT</span>
               <div className="pandu-exit-heading"><div className="pandu-list-icon"><DoorOpen size={18} /></div><div><h2>{exit.recommended_exit}</h2><p>{exit.target_street || 'Arah tujuan belum tersedia'}</p></div></div>
-              <div className="pandu-exit-meta"><span><MapPinned size={14} />{intelligence.boarding_recommendation?.walking_time_seconds || '—'}m from arrival</span><span><Accessibility size={14} />{exit.is_accessible ? 'Accessible route' : 'Accessibility not available'}</span></div>
+              <div className="pandu-exit-meta"><span><MapPinned size={14} />{exit.distance_meters != null ? `${exit.distance_meters}m from target` : 'Distance unavailable'}</span><span><Accessibility size={14} />{exit.is_accessible ? 'Accessible route' : 'Accessibility not available'}</span></div>
               <div className="pandu-explain-box"><Info size={15} /><div><strong>Why this is recommended</strong><p>{exit.reason}</p><small>{exit.analysis_method || 'Spatial Relationship + Nearest Facility Analysis'} · {formatUpdatedAt(exit.last_updated)}</small></div></div>
               <div className="pandu-panel-actions"><button type="button" className="pandu-primary-button" onClick={() => onNavigate(`/facility-finder?station_id=${destinationId || ''}`)}>Show facilities <ArrowRight size={14} /></button><button type="button" className="pandu-secondary-button" onClick={() => onToast(exit.explainability || exit.reason)}>Explain recommendation</button></div>
-            </section>
+            </section> : <ExplicitDataState title="Exit recommendation unavailable" body="Target coordinates or verified exit data were not provided for this journey." actionLabel="Open station information" onAction={() => onNavigate(`/station-info?station_id=${destinationId || ''}`)} />}
 
             <aside className="pandu-alternative-exits">
               <span className="pandu-card-label">OTHER EXITS</span>
@@ -654,7 +634,7 @@ function FacilityRecommendationView({ stations, onNavigate, initialStationId = '
 
       <div className="pandu-facility-grid">
         <section className="pandu-facility-map-panel"><div className="pandu-panel-heading"><div><span className="pandu-card-label blue">PROXIMITY MAP</span><h2>{station?.name || 'Station context'}</h2></div><span className="pandu-live-status"><span />{loading ? 'Syncing' : recommended ? 'Recommendation live' : 'Data unavailable'}</span></div><div className="pandu-facility-map-viewport"><WebGisMap stations={station ? [station] : stations} selectedStation={station} initialStyle="light" compactControls /></div><DataSourceNote source={recommended?.data_source || 'GEO MAPID + Community Report'} timestamp={recommended?.updated_at || station?.updated_at} /></section>
-        <section className="pandu-facility-list-panel"><span className="pandu-card-label green">NEAREST VERIFIED OPTION</span>{recommended ? <article className="pandu-recommended-facility"><div className="pandu-list-icon"><Accessibility size={18} /></div><div><h2>{recommended.name || recommended.facility_name}</h2><p>{recommended.status_note || recommended.category || 'Facility available'}</p><div className="pandu-facility-meta"><span><MapPin size={13} />{recommended.walking_time_seconds != null ? `${recommended.walking_time_seconds}m` : 'Distance unavailable'}</span><span><CircleCheck size={13} />Available</span></div><small>{recommended.nearest_exit ? `Near ${recommended.nearest_exit}` : 'Nearest Facility Analysis'} · {recommended.last_updated || formatUpdatedAt(recommended.updated_at)}</small></div></article> : null}<div className="pandu-facility-list-heading"><span>All matching facilities</span><span>{rankedFacilities.length}</span></div>{rankedFacilities.map((facility) => { const available = facilityIsAvailable(facility); return <article className={`pandu-facility-row ${available ? '' : 'is-unavailable'}`} key={facility.id || facility.name || facility.facility_name}><div className="pandu-list-icon">{/lift|ramp|akses|difabel/i.test(facility.name || facility.facility_name || '') ? <Accessibility size={15} /> : <Building2 size={15} />}</div><div><strong>{facility.name || facility.facility_name}</strong><span>{available ? (facility.status_note || 'Available') : (facility.status_note || 'Status unavailable')}</span><small>{facility.walking_time_seconds != null ? `${facility.walking_time_seconds}m walk` : 'Distance not available'} · {facility.last_updated || formatUpdatedAt(facility.updated_at)}</small>{!available && facility.alternative_facility ? <em>Alternative: {facility.alternative_facility.name || facility.alternative_facility.facility_name}</em> : null}</div><span className={`pandu-status-pill ${available ? 'success' : 'danger'}`}><span />{available ? 'Available' : 'Unavailable'}</span></article>; })}<button type="button" className="pandu-secondary-button pandu-full-button" onClick={() => onNavigate('/community-report')}><CircleAlert size={14} /> Report facility update</button></section>
+        <section className="pandu-facility-list-panel"><span className="pandu-card-label green">NEAREST VERIFIED OPTION</span>{recommended ? <article className="pandu-recommended-facility"><div className="pandu-list-icon"><Accessibility size={18} /></div><div><h2>{recommended.name || recommended.facility_name}</h2><p>{recommended.status_note || recommended.category || 'Facility available'}</p><div className="pandu-facility-meta"><span><MapPin size={13} />{recommended.walking_time_seconds != null ? `${Math.ceil(recommended.walking_time_seconds / 60)} min walk` : 'Distance unavailable'}</span><span><CircleCheck size={13} />Available</span></div><small>{recommended.nearest_exit ? `Near ${recommended.nearest_exit}` : 'Nearest Facility Analysis'} · {recommended.last_updated || formatUpdatedAt(recommended.updated_at)}</small></div></article> : null}<div className="pandu-facility-list-heading"><span>All matching facilities</span><span>{rankedFacilities.length}</span></div>{rankedFacilities.map((facility) => { const available = facilityIsAvailable(facility); return <article className={`pandu-facility-row ${available ? '' : 'is-unavailable'}`} key={facility.id || facility.name || facility.facility_name}><div className="pandu-list-icon">{/lift|ramp|akses|difabel/i.test(facility.name || facility.facility_name || '') ? <Accessibility size={15} /> : <Building2 size={15} />}</div><div><strong>{facility.name || facility.facility_name}</strong><span>{available ? (facility.status_note || 'Available') : (facility.status_note || 'Status unavailable')}</span><small>{facility.walking_time_seconds != null ? `${Math.ceil(facility.walking_time_seconds / 60)} min walk` : 'Distance not available'} · {facility.last_updated || formatUpdatedAt(facility.updated_at)}</small>{!available && facility.alternative_facility ? <em>Alternative: {facility.alternative_facility.name || facility.alternative_facility.facility_name}</em> : null}</div><span className={`pandu-status-pill ${available ? 'success' : 'danger'}`}><span />{available ? 'Available' : 'Unavailable'}</span></article>; })}<button type="button" className="pandu-secondary-button pandu-full-button" onClick={() => onNavigate('/community-report')}><CircleAlert size={14} /> Report facility update</button></section>
       </div>
       <BottomNavigation active="home" />
     </div>
@@ -694,8 +674,14 @@ function DataAvailabilityView({ onNavigate }) {
   return <div className="pandu-page pandu-subpage pandu-availability-page"><div className="pandu-subpage-intro"><p className="pandu-eyebrow orange-text">DATA TRANSPARENCY</p><h1>When data is missing, we say so.</h1><p className="pandu-lede">PanduYuk never fills gaps with a guess. We show the source and the last time it was checked.</p></div><div className="pandu-availability-grid"><section className="pandu-availability-card"><span className="pandu-status-pill danger"><span />DATA UNAVAILABLE</span><h2>Real-time route data is not available.</h2><p>GTFS Realtime did not return a route for this journey. Choose another transit point or try again later.</p><DataSourceNote source="GTFS Realtime" timestamp={new Date().toISOString()} /><button type="button" className="pandu-primary-button" onClick={() => onNavigate('/route-planner')}>Choose another transit point <ArrowRight size={14} /></button></section><section className="pandu-availability-card"><span className="pandu-status-pill warning"><span />PARTIALLY AVAILABLE</span><h2>Facility status needs verification.</h2><p>We keep the last known status visible and tell you when it was last checked.</p><DataSourceNote source="GEO MAPID + Community Report" /><button type="button" className="pandu-secondary-button" onClick={() => onNavigate('/station-info')}>Open station guide <ArrowRight size={14} /></button></section></div><BottomNavigation active="home" /></div>;
 }
 
-function HomeView({ stations, onNavigate, onToast }) {
+function HomeView({ stations, onNavigate, onToast, journeyData }) {
   const today = useMemo(formatToday, []);
+  const route = journeyData?.route;
+  const firstLeg = route?.legs?.[0];
+  const firstStop = firstLeg?.stops?.[0];
+  const originName = route?.origin?.name || 'Origin unavailable';
+  const destinationName = route?.destination?.name || 'Destination unavailable';
+  const routeSummary = route ? `${route.total_transfers ?? 0} transfer · ${route.estimated_duration_minutes ?? '—'} min` : 'No journey data';
 
   return (
     <div className="pandu-page pandu-home-page">
@@ -707,41 +693,41 @@ function HomeView({ stations, onNavigate, onToast }) {
 
           <SearchJourneyCard onPlan={() => onNavigate('/route-planner')} />
 
-          <div className="pandu-desktop-home-cards desktop-only">
+          {journeyData?.route ? <div className="pandu-desktop-home-cards desktop-only">
             <article className="pandu-card next-ride-card">
               <span className="pandu-card-label green">NEXT DEPARTURE</span>
-              <strong>08:24</strong>
-              <span className="pandu-card-title">MRT Jakarta • Dukuh Atas</span>
-              <span className="pandu-card-meta">4 min away&nbsp; · &nbsp;Platform 2</span>
+              <strong>{firstStop?.departure_time || 'Schedule unavailable'}</strong>
+              <span className="pandu-card-title">{firstLeg?.route_name || 'Route unavailable'}</span>
+              <span className="pandu-card-meta">{route?.data_source || 'GTFS_STATIC'} · {firstLeg?.stops?.length || 0} stops</span>
               <ArrowRight className="next-ride-arrow" size={30} aria-hidden="true" />
             </article>
 
             <article className="pandu-card journey-progress-card">
               <span className="pandu-card-label blue">YOUR JOURNEY</span>
-              <span className="pandu-card-title">Palmerah → Bundaran HI</span>
-              <span className="pandu-card-meta">Transit in 14 minutes</span>
-              <div className="pandu-progress"><span /></div>
-              <span className="pandu-card-meta">2 of 5 stages complete</span>
+              <span className="pandu-card-title">{originName} → {destinationName}</span>
+              <span className="pandu-card-meta">{routeSummary}</span>
+              <div className="pandu-progress"><span style={{ width: journeyData.status === 'COMPLETED' ? '100%' : '0%' }} /></div>
+              <span className="pandu-card-meta">Status: {journeyData.status || 'PLANNED'}</span>
               <button type="button" className="pandu-text-button" onClick={() => onNavigate('/trip-detail')}>Open journey <ArrowRight size={13} /></button>
             </article>
-          </div>
+          </div> : <ExplicitDataState title="Belum ada perjalanan aktif" body="Pilih asal dan tujuan untuk memuat jadwal GTFS dan timeline perjalanan aktual." actionLabel="Plan a journey" onAction={() => onNavigate('/route-planner')} />}
 
-          <div className="pandu-mobile-home-cards mobile-only">
+          {journeyData?.route ? <div className="pandu-mobile-home-cards mobile-only">
             <article className="pandu-mobile-journey-card">
               <span className="pandu-card-label blue">NEXT JOURNEY</span>
-              <strong>Stasiun Palmerah</strong>
-              <strong>Bundaran HI</strong>
-              <span className="pandu-card-meta">08:24&nbsp; · &nbsp;1 transit&nbsp; · &nbsp;34 min</span>
+              <strong>{originName}</strong>
+              <strong>{destinationName}</strong>
+              <span className="pandu-card-meta">{firstStop?.departure_time || 'Schedule unavailable'} · {routeSummary}</span>
               <button type="button" className="pandu-primary-button" onClick={() => onNavigate('/trip-detail')}>Open</button>
             </article>
 
             <article className="pandu-card mobile-progress-card">
               <span className="pandu-card-label green">YOUR JOURNEY</span>
-              <span className="pandu-card-title">Transit in 14 minutes</span>
-              <div className="pandu-progress"><span /></div>
-              <span className="pandu-progress-count">2 / 5</span>
+              <span className="pandu-card-title">{route?.data_source || 'GTFS_STATIC'}</span>
+              <div className="pandu-progress"><span style={{ width: journeyData.status === 'COMPLETED' ? '100%' : '0%' }} /></div>
+              <span className="pandu-progress-count">{journeyData.status || 'PLANNED'}</span>
             </article>
-          </div>
+          </div> : null}
 
           <div className="pandu-quick-actions-block" id="how-it-works">
             <p className="pandu-section-label">QUICK ACTIONS</p>
@@ -777,8 +763,8 @@ function HomeView({ stations, onNavigate, onToast }) {
           <MiniTransitMap />
           <div className="pandu-next-moment">
             <span className="pandu-card-label blue">NEXT MOMENT</span>
-            <strong>Boarding recommendation</strong>
-            <span>Ready when you are&nbsp; · &nbsp;3 min</span>
+            <strong>{journeyData?.transit_intelligence?.boarding_recommendation?.recommended_car || 'Boarding recommendation unavailable'}</strong>
+            <span>{journeyData?.transit_intelligence?.boarding_recommendation?.reason || 'Plan a journey to load verified boarding data.'}</span>
             <ChevronRight size={20} className="blue-icon" aria-hidden="true" />
           </div>
         </aside>
@@ -789,42 +775,152 @@ function HomeView({ stations, onNavigate, onToast }) {
   );
 }
 
-function RouteStop({ time, label, destination = false }) {
+const ROUTE_LEG_COLORS = ['#2563eb', '#0f766e', '#d97706', '#7c3aed', '#dc2626'];
+
+function routeLegColor(leg, index) {
+  return leg?.color || ROUTE_LEG_COLORS[index % ROUTE_LEG_COLORS.length];
+}
+
+function routeLegDirection(leg) {
+  const firstStop = leg?.stops?.[0]?.name || 'Titik naik';
+  const lastStop = leg?.stops?.[leg.stops.length - 1]?.name || 'Titik turun';
+  return `${firstStop} → ${lastStop}`;
+}
+
+function RouteStationSequence({ route }) {
+  const legs = route?.legs || [];
+  const totalStops = legs.reduce((total, leg) => total + (leg.stops?.length || 0), 0);
+  const currentStopId = route?.current_stop_id;
+
   return (
-    <div className="pandu-route-stop">
-      <img src={destination ? routeDestination : routeStop} alt="" />
-      <span className={destination ? 'orange-text' : 'blue-text'}>{time}</span>
-      <strong>{label}</strong>
+    <div className="pandu-route-station-sequence" aria-label="Urutan stasiun dan halte">
+      <div className="pandu-route-sequence-header">
+        <span className="pandu-card-label">ALUR STASIUN / HALTE</span>
+        <span>{totalStops} stop · {route?.total_transfers || 0} transfer</span>
+      </div>
+      {legs.map((leg, legIndex) => {
+        const color = routeLegColor(leg, legIndex);
+        return (
+          <div className="pandu-route-leg-block" key={`${leg.route_id}-${leg.trip_id}-${legIndex}`}>
+            <div className="pandu-route-leg-heading" style={{ '--route-leg-color': color }}>
+              <span className="pandu-route-leg-swatch" aria-hidden="true" />
+              <strong>{leg.mode || 'Transit'} · {leg.route_name || leg.route_id}</strong>
+              <small>{routeLegDirection(leg)}</small>
+            </div>
+            {leg.transfer_at ? <div className="pandu-route-transfer-inline"><RouteIcon size={12} aria-hidden="true" /> Transfer di <strong>{leg.transfer_at}</strong></div> : null}
+            <div className="pandu-route-station-list">
+              {(leg.stops || []).map((stop, stopIndex) => {
+                const isFirst = legIndex === 0 && stopIndex === 0;
+                const isLast = legIndex === legs.length - 1 && stopIndex === leg.stops.length - 1;
+                const isCurrent = currentStopId && String(currentStopId) === String(stop.id);
+                const label = isCurrent ? 'Posisi terakhir' : isFirst ? 'Naik di sini' : isLast ? 'Turun di sini' : 'Lewat';
+                return (
+                  <div className={`pandu-route-station-row ${isCurrent ? 'is-current' : ''} ${isFirst ? 'is-origin' : ''} ${isLast ? 'is-destination' : ''}`} key={`${stop.id}-${stopIndex}`}>
+                    <span className="pandu-route-station-marker" style={{ '--route-leg-color': color }} aria-hidden="true" />
+                    <span className="pandu-route-station-time">{stop.arrival_time || stop.departure_time || '—'}</span>
+                    <span className="pandu-route-station-copy"><strong>{stop.name}</strong><small>{label}</small></span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      <small className="pandu-route-sequence-note">Urutan stop berasal dari GTFS. Posisi kendaraan akan berubah menjadi aktual jika GTFS Realtime tersedia.</small>
     </div>
   );
 }
 
+function RouteMapPanel({ route }) {
+  const [activeLegId, setActiveLegId] = useState(null);
+  const legs = route?.legs || [];
+  const activeLeg = legs.find((leg) => String(leg.route_id) === String(activeLegId));
+
+  useEffect(() => {
+    setActiveLegId(null);
+  }, [route]);
+
+  if (!route || legs.length === 0) return null;
+
+  return (
+    <section className="pandu-route-map-card" aria-labelledby="pandu-route-map-title">
+      <div className="pandu-route-map-header">
+        <div>
+          <span className="pandu-card-label blue">ROUTE DIRECTIONS · GTFS</span>
+          <h2 id="pandu-route-map-title">Lihat arah jalur tiap transum</h2>
+          <p>Garis warna menunjukkan koridor yang dipakai. Klik moda untuk menyorot jalurnya.</p>
+        </div>
+        <span className="pandu-live-status"><span />{route.data_source || 'GTFS_STATIC'}</span>
+      </div>
+
+      <div className="pandu-route-map-content">
+        <div className="pandu-route-map-viewport">
+          <WebGisMap
+            routePlan={route}
+            selectedRouteId={activeLeg?.route_id || null}
+            routeFocusLegId={activeLeg?.route_id || null}
+            initialStyle="light"
+            compactControls
+          />
+        </div>
+
+        <aside className="pandu-route-leg-list" aria-label="Arah per moda">
+          <div className="pandu-route-leg-list-heading">
+            <span className="pandu-card-label">DIRECTIONS</span>
+            <span>{legs.length} leg</span>
+          </div>
+          {legs.map((leg, index) => {
+            const color = routeLegColor(leg, index);
+            const isActive = String(leg.route_id) === String(activeLegId);
+            return (
+              <button
+                key={`${leg.route_id}-${leg.trip_id}-${index}`}
+                type="button"
+                className={`pandu-route-leg ${isActive ? 'is-active' : ''}`}
+                style={{ '--route-leg-color': color }}
+                aria-pressed={isActive}
+                onClick={() => setActiveLegId(isActive ? null : leg.route_id)}
+              >
+                <span className="pandu-route-leg-swatch" aria-hidden="true" />
+                <span className="pandu-route-leg-copy">
+                  <strong>{leg.mode || 'Transit'} · {leg.route_name || leg.route_id}</strong>
+                  <span>{routeLegDirection(leg)}</span>
+                  <small>{leg.duration_minutes || '—'} min · {leg.stops?.length || 0} stop</small>
+                </span>
+                <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            );
+          })}
+          {legs.slice(1).map((leg, index) => leg.transfer_at ? (
+            <div className="pandu-route-transfer-note" key={`transfer-${leg.transfer_at}-${index}`}>
+              <RouteIcon size={13} aria-hidden="true" />
+              Transfer di <strong>{leg.transfer_at}</strong>
+            </div>
+          ) : null)}
+          <small className="pandu-route-map-source">Klik ulang moda untuk menampilkan semua jalur. {route.map?.features?.length || 0} geometry GTFS tersedia.</small>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
 function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
-  const defaultOrigin = stations.find((station) => /palmerah|manggarai/i.test(station.name || '')) || stations[0];
-  const defaultDestination = stations.find((station) => /bundaran hi/i.test(station.name || '')) || stations[1] || stations[0];
-  const [originId, setOriginId] = useState(defaultOrigin?.id ?? '');
-  const [destinationId, setDestinationId] = useState(defaultDestination?.id ?? '');
+  const [originId, setOriginId] = useState('');
+  const [destinationId, setDestinationId] = useState('');
   const [loading, setLoading] = useState(false);
   const [routeReady, setRouteReady] = useState(false);
   const [routeAttempted, setRouteAttempted] = useState(false);
   const [journeyData, setJourneyData] = useState(null);
 
   useEffect(() => {
-    const nextOrigin = stations.find((station) => /palmerah|manggarai/i.test(station.name || '')) || stations[0];
-    const nextDestination = stations.find((station) => /bundaran hi/i.test(station.name || '')) || stations[1] || stations[0];
-    setOriginId(nextOrigin?.id ?? '');
-    setDestinationId(nextDestination?.id ?? '');
+    if (originId && !stations.some((station) => String(station.id) === String(originId))) setOriginId('');
+    if (destinationId && !stations.some((station) => String(station.id) === String(destinationId))) setDestinationId('');
   }, [stations]);
 
-  const origin = stations.find((station) => String(station.id) === String(originId));
-  const destination = stations.find((station) => String(station.id) === String(destinationId));
-  const originName = stationLabel(journeyData?.route?.origin || origin, 'Stasiun Manggarai');
-  const destinationName = stationLabel(journeyData?.route?.destination || destination, 'Stasiun Bundaran HI');
   const routeSummary = journeyData?.route;
-  const routeSteps = journeyData?.route?.stepper_timeline || [];
-  const estimatedDuration = routeSummary?.estimated_duration_minutes || 34;
-  const totalFare = routeSummary?.total_fare ?? 3500;
-  const transferCount = Math.max(0, routeSteps.filter((step) => /TRANSIT/i.test(step.transport_mode || '')).length);
+  const estimatedDuration = routeSummary?.estimated_duration_minutes;
+  const totalFare = routeSummary?.total_fare;
+  const transferCount = routeSummary?.total_transfers ?? 0;
   const routeMethod = journeyData?.transit_intelligence?.boarding_recommendation?.analysis_method;
 
   const handleFindRoutes = async (event) => {
@@ -861,14 +957,16 @@ function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
           <label htmlFor="origin">From</label>
           <div className="pandu-select-wrap blue-field">
             <span className="pandu-field-dot" />
-            <select id="origin" value={originId} onChange={(event) => setOriginId(event.target.value)}>
+            <select id="origin" value={originId} onChange={(event) => setOriginId(event.target.value)} required>
+              <option value="">Choose a station or stop</option>
               {stations.map((station) => <option key={`origin-${station.id}`} value={station.id}>{station.name}</option>)}
             </select>
           </div>
           <label htmlFor="destination">To</label>
           <div className="pandu-select-wrap orange-field">
             <span className="pandu-field-dot" />
-            <select id="destination" value={destinationId} onChange={(event) => setDestinationId(event.target.value)}>
+            <select id="destination" value={destinationId} onChange={(event) => setDestinationId(event.target.value)} required>
+              <option value="">Choose a destination</option>
               {stations.map((station) => <option key={`destination-${station.id}`} value={station.id}>{station.name}</option>)}
             </select>
           </div>
@@ -886,22 +984,20 @@ function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
 
         <section className="pandu-recommended-route">
           {routeAttempted && !routeReady ? <ExplicitDataState title="Data rute belum tersedia" body="GTFS tidak mengirim perjalanan yang cocok. Kami tidak menampilkan rute kosong atau membuat rekomendasi tanpa sumber." actionLabel="Open data status" onAction={() => onNavigate('/data-availability')} /> : null}
-          {!routeAttempted || routeReady ? <>
-          <span className="pandu-card-label blue">RECOMMENDED FOR YOU</span>
-          <h2>The calmest route</h2>
-          <p className="pandu-route-summary">{transferCount} transfer&nbsp; · &nbsp;{estimatedDuration} min&nbsp; · &nbsp;{formatFare(totalFare)}</p>
-          <div className="pandu-route-timeline">
-            <RouteStop time="Start" label={displayStationName(originName, 'Manggarai')} />
-            <RouteStop time={routeReady ? 'Live' : 'Next'} label={routeReady ? (routeSteps.find((step) => /TRANSIT|KRL|MRT|LRT/i.test(step.transport_mode || ''))?.title || 'Transit connection') : 'Transit connection'} />
-            <RouteStop time={`${estimatedDuration} min`} label={displayStationName(destinationName, 'Bundaran HI')} destination />
-          </div>
-          <div className="pandu-route-note">{routeMethod || 'Rule-based route ranking'} · GTFS + MAPID data</div>
+          {!routeAttempted ? <ExplicitDataState title="Pilih asal dan tujuan" body="PanduYuk akan menampilkan rute hanya jika GTFS memiliki perjalanan yang benar-benar menghubungkan pilihan Anda." /> : null}
+          {routeReady ? <>
+           <span className="pandu-card-label blue">RECOMMENDED FOR YOU</span>
+           <h2>The calmest route</h2>
+           <p className="pandu-route-summary">{transferCount} transfer&nbsp; · &nbsp;{estimatedDuration} min&nbsp; · &nbsp;{formatFare(totalFare)}</p>
+           <RouteStationSequence route={routeSummary} />
+           <div className="pandu-route-note">{routeMethod || 'Dijkstra · explainable GTFS weights'} · {routeSummary.data_source} · {formatUpdatedAt(routeSummary.last_updated)}</div>
           <button type="button" className="pandu-primary-button pandu-route-cta" onClick={() => onNavigate('/trip-detail')}>
             {routeReady ? 'Continue with live route' : 'Show route details'} <ArrowRight size={15} />
           </button>
-          </> : null}
+           </> : null}
         </section>
       </div>
+      {routeReady ? <RouteMapPanel route={routeSummary} /> : null}
       <PanduMapCard stations={stations} onNavigate={onNavigate} compact />
       <p className="pandu-footnote">You can change the route anytime.</p>
       <BottomNavigation active="trips" />
@@ -924,23 +1020,34 @@ function TimelineRow({ item, index, totalItems }) {
 }
 
 function TripDetailView({ onNavigate, onToast, journeyData }) {
-  const route = journeyData?.route;
-  const intelligence = journeyData?.transit_intelligence || {};
+  const [liveJourney, setLiveJourney] = useState(journeyData);
+  useEffect(() => {
+    setLiveJourney(journeyData);
+    if (!journeyData?.journey_id) return undefined;
+    let active = true;
+    const poll = () => api.get(`/v1/journeys/${journeyData.journey_id}`).then((response) => { if (active) setLiveJourney(response.data?.data || null); }).catch(() => {});
+    poll();
+    const timer = window.setInterval(poll, 15000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [journeyData]);
+  const currentJourney = liveJourney || journeyData;
+  const route = currentJourney?.route;
+  const intelligence = currentJourney?.transit_intelligence || {};
   const boarding = intelligence.boarding_recommendation;
   const exit = intelligence.exit_recommendation;
   const monitoring = intelligence.journey_monitoring;
-  const originName = displayStationName(route?.origin?.name, 'Palmerah');
-  const destinationName = displayStationName(route?.destination?.name, 'Bundaran HI');
-  const liveTimeline = journeyData ? buildJourneyTimeline(journeyData) : timelineItems;
-  const recommendedCar = boarding?.recommended_car || 'Board car 3';
-  const exitLabel = exit?.recommended_exit || 'Gate 3';
-  const walkingLabel = boarding?.walking_time_seconds ? `${Math.ceil(boarding.walking_time_seconds / 60)} min walk` : '4 min walk';
+  const originName = displayStationName(route?.origin?.name, 'Origin unavailable');
+  const destinationName = displayStationName(route?.destination?.name, 'Destination unavailable');
+  const liveTimeline = currentJourney ? buildJourneyTimeline(currentJourney) : [];
+  const recommendedCar = boarding?.recommended_car;
+  const exitLabel = exit?.recommended_exit;
+  const walkingLabel = boarding?.walking_time_seconds ? `${Math.ceil(boarding.walking_time_seconds / 60)} min walk` : null;
 
   return (
     <div className="pandu-page pandu-subpage pandu-trip-page">
       <div className="pandu-subpage-intro">
         <p className="pandu-eyebrow green-text">LIVE JOURNEY</p>
-        <h1>{originName} → {destinationName}</h1>
+        <h1>{originName || 'Journey'} → {destinationName || 'Destination'}</h1>
         <p className="pandu-lede">You’re on track. Here’s what matters next.</p>
       </div>
 
@@ -949,37 +1056,37 @@ function TripDetailView({ onNavigate, onToast, journeyData }) {
           <span className="pandu-card-label">YOUR TIMELINE</span>
           <h2>A calm step at a time.</h2>
           <div className="pandu-timeline-list">
-            {liveTimeline.map((item, index) => <TimelineRow item={item} index={index} totalItems={liveTimeline.length} key={item.label} />)}
+            {liveTimeline.length ? liveTimeline.map((item, index) => <TimelineRow item={item} index={index} totalItems={liveTimeline.length} key={`${item.label}-${index}`} />) : <ExplicitDataState title="Journey belum dipilih" body="Buat perjalanan dari route planner untuk melihat stop dan timeline aktual." actionLabel="Plan a journey" onAction={() => onNavigate('/route-planner')} />}
           </div>
         </section>
 
         <div className="pandu-trip-side">
           <section className="pandu-next-action-card">
             <span className="pandu-card-label blue">NEXT BEST ACTION</span>
-            <h2>{recommendedCar}</h2>
-            <p>{boarding?.reason || 'Closest to the best exit for your destination.'}</p>
-            <button type="button" className="pandu-primary-button" onClick={() => onToast(boarding?.explainability || 'Boarding car dipilih dari posisi rute dan exit terdekat yang tersedia.')}>Explain recommendation</button>
+            <h2>{recommendedCar || 'Boarding data unavailable'}</h2>
+            <p>{boarding?.reason || 'No verified boarding recommendation is available for this origin and destination.'}</p>
+            {boarding?.reason ? <button type="button" className="pandu-primary-button" onClick={() => onToast(boarding?.reason)}>Explain recommendation</button> : null}
           </section>
 
           <section className="pandu-arrival-card">
             <span className="pandu-card-label">ARRIVAL SNAPSHOT</span>
             <div className="pandu-arrival-grid">
-              <div><span>Exit</span><strong>{exitLabel} • {boarding?.walking_time_seconds || 85} m</strong></div>
-              <div><span>Access</span><strong>{exit?.is_accessible === false ? 'Check accessibility' : 'Accessible route'}</strong></div>
-              <div><span>Walk</span><strong>{walkingLabel}</strong></div>
+              <div><span>Exit</span><strong>{exitLabel ? `${exitLabel} · ${exit.distance_meters} m` : 'Exit data unavailable'}</strong></div>
+              <div><span>Access</span><strong>{exit ? (exit.is_accessible === false ? 'Check accessibility' : 'Accessible route') : 'Not assessed'}</strong></div>
+              <div><span>Walk</span><strong>{walkingLabel || 'Distance unavailable'}</strong></div>
             </div>
             <button type="button" className="pandu-secondary-button" onClick={() => onNavigate('/community-report')}>Report issue</button>
           </section>
 
           <section className="pandu-monitoring-card">
             <span className="pandu-card-label green">JOURNEY MONITORING</span>
-            <strong>{monitoring?.status_label || 'Service status is being monitored'}</strong>
-            <p>{monitoring?.crowd_level || 'Live crowd level will appear when realtime data is available.'}{monitoring?.weather?.condition ? ` · ${monitoring.weather.condition} ${monitoring.weather.temperature || ''}` : ''}</p>
-            <small>{monitoring?.last_synced_at ? `GTFS Realtime + BMKG · ${monitoring.last_synced_at}` : 'GTFS Realtime + recent community reports'}</small>
+            <strong>{monitoring?.status_label || (monitoring?.status === 'live' ? 'Realtime tersedia' : 'Realtime unavailable')}</strong>
+            <p>{monitoring?.message || 'GTFS Realtime belum mengirim data kendaraan untuk journey ini.'}</p>
+            <small>{monitoring?.last_updated ? `GTFS Realtime · ${formatUpdatedAt(monitoring.last_updated)}` : 'Tidak ada timestamp realtime'}</small>
           </section>
         </div>
       </div>
-      <p className="pandu-footnote">{journeyData ? `Live route data · ${monitoring?.last_synced_at || 'synced just now'}` : 'Choose a route to activate live recommendations.'}</p>
+      <p className="pandu-footnote">{currentJourney ? `${currentJourney.data_source || 'GTFS_STATIC'} route · ${monitoring?.status || 'unavailable'}` : 'Choose a route to activate journey monitoring.'}</p>
       <BottomNavigation active="trips" />
     </div>
   );
@@ -1136,19 +1243,20 @@ export default function PanduYukExperience({ onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('mapid_theme') === 'dark');
-  const [stations, setStations] = useState(FALLBACK_STATIONS);
+  const [stations, setStations] = useState([]);
   const [toast, setToast] = useState('');
-  const [journeyData, setJourneyData] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem('pandu_journey_data') || 'null');
-    } catch {
-      return null;
-    }
-  });
+  const [journeyData, setJourneyData] = useState(null);
 
   const handleJourneyReady = (data) => {
     setJourneyData(data);
-    sessionStorage.setItem('pandu_journey_data', JSON.stringify(data));
+    if (data?.journey_id) {
+      localStorage.setItem('pandu_journey_id', String(data.journey_id));
+      sessionStorage.setItem('pandu_journey_id', String(data.journey_id));
+      if (data.guest_token) {
+        localStorage.setItem('pandu_guest_journey_token', String(data.guest_token));
+        sessionStorage.setItem('pandu_guest_journey_token', String(data.guest_token));
+      }
+    }
   };
 
   useEffect(() => {
@@ -1163,6 +1271,17 @@ export default function PanduYukExperience({ onLogout }) {
         if (active && data.length > 0) setStations(data);
       })
       .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const journeyId = localStorage.getItem('pandu_journey_id') || sessionStorage.getItem('pandu_journey_id');
+    if (!journeyId) return undefined;
+    let active = true;
+    api.get(`/v1/journeys/${journeyId}`).then((response) => { if (active) setJourneyData(response.data?.data || null); }).catch(() => {
+      localStorage.removeItem('pandu_journey_id');
+      sessionStorage.removeItem('pandu_journey_id');
+    });
     return () => { active = false; };
   }, []);
 
@@ -1227,7 +1346,7 @@ export default function PanduYukExperience({ onLogout }) {
     onBack = () => navigate('/route-planner');
     content = <DataAvailabilityView onNavigate={navigate} />;
   } else {
-    content = <HomeView stations={stations} onNavigate={navigate} onToast={setToast} />;
+    content = <HomeView stations={stations} onNavigate={navigate} onToast={setToast} journeyData={journeyData} />;
   }
 
   return (

@@ -6,10 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Station;
 use App\Models\TransitRoute;
 use App\Models\CommunityReport;
+use App\Models\Facility;
 use App\Models\Journey;
 use App\Models\JourneyTimeline;
 use App\Services\HuffGravityModel;
 use App\Services\GeminiAiService;
+use App\Services\GtfsRealtimeService;
+use App\Services\JourneyPersistenceService;
+use App\Services\TransitRoutePlannerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
@@ -91,19 +95,11 @@ class MapidController extends Controller
             ], 404);
         }
 
-        // Automatic Autonomous AI Enrichment: If station lacks micro-data or is stale, query Gemini 3.6 Flash
-        $aiService = new GeminiAiService();
-        if ($aiService->shouldAutoEnrich($station)) {
-            $aiService->enrichStation($station, false);
-            $station->load(['facilities', 'exits', 'tenants', 'boardingRecommendations']);
-        }
-
-        $aiMeta = Cache::get("station_ai_enrichment_{$station->id}");
-
         return response()->json([
             'status' => 'success',
             'data' => $station,
-            'ai_metadata' => $aiMeta
+            'data_source' => 'MAPID_VERIFIED_DATA',
+            'last_updated' => $station->updated_at?->toIso8601String(),
         ]);
     }
 
@@ -121,18 +117,11 @@ class MapidController extends Controller
             ], 404);
         }
 
-        $force = filter_var($request->input('force', true), FILTER_VALIDATE_BOOLEAN);
-        $aiService = new GeminiAiService();
-        $result = $aiService->enrichStation($station, $force);
-
-        $station->load(['facilities', 'exits', 'tenants', 'boardingRecommendations']);
-
         return response()->json([
-            'status' => 'success',
-            'message' => "Data {$station->name} berhasil diperbarui otomatis oleh Gemini 3.6 Flash",
-            'ai_result' => $result,
-            'station' => $station
-        ]);
+            'status' => 'unavailable',
+            'message' => 'AI hanya tersedia sebagai bantuan opsional dan tidak boleh menulis data transit resmi.',
+            'data_source' => 'AI_OPTIONAL_ONLY',
+        ], 422);
     }
 
     /**
@@ -596,7 +585,7 @@ class MapidController extends Controller
         $status = $request->query('status');
         $stationId = $request->query('station_id');
 
-        $query = CommunityReport::with(['station', 'user', 'facility'])->latest();
+        $query = CommunityReport::with(['station', 'facility'])->latest();
 
         if ($status && $status !== 'all') {
             $query->where('status', $status);
@@ -608,10 +597,26 @@ class MapidController extends Controller
 
         $reports = $query->limit(50)->get();
 
+        $publicReports = $reports->map(fn (CommunityReport $report) => [
+            'id' => $report->id,
+            'station' => $report->station ? ['id' => $report->station->id, 'name' => $report->station->name] : null,
+            'facility' => $report->facility ? ['id' => $report->facility->id, 'name' => $report->facility->facility_name] : null,
+            'report_type' => $report->report_type,
+            'issue' => $report->issue,
+            'description' => $report->description,
+            'status' => $report->status,
+            'photo_url' => $report->photo_url,
+            'created_at' => $report->created_at?->toIso8601String(),
+            'updated_at' => $report->updated_at?->toIso8601String(),
+            'verified_at' => $report->verified_at?->toIso8601String(),
+            'verification_notes' => $report->verification_notes,
+        ])->values();
+
         return response()->json([
             'status' => 'success',
-            'count' => $reports->count(),
-            'data' => $reports
+            'count' => $publicReports->count(),
+            'data' => $publicReports,
+            'data_source' => 'COMMUNITY_REPORTS_VERIFIED_FLOW',
         ]);
     }
 
@@ -627,11 +632,14 @@ class MapidController extends Controller
             'report_type' => 'nullable|string|max:100',
             'issue' => 'required|string|max:255',
             'description' => 'required|string',
-            'photo_url' => 'nullable|string',
+            'photo_url' => 'nullable|url|max:2048',
+            'photo' => 'nullable|file|image|mimes:jpg,jpeg,png,webp|max:5120',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
         ]);
 
+        $photoUrl = $validated['photo_url'] ?? null;
+        if ($request->hasFile('photo')) $photoUrl = '/storage/' . $request->file('photo')->store('community-reports', 'public');
         $report = CommunityReport::create([
             'user_id' => $request->user()?->id,
             'station_id' => $validated['station_id'],
@@ -639,7 +647,7 @@ class MapidController extends Controller
             'report_type' => $validated['report_type'] ?? 'Fasilitas Stasiun',
             'issue' => $validated['issue'],
             'description' => $validated['description'],
-            'photo_url' => $validated['photo_url'] ?? null,
+            'photo_url' => $photoUrl,
             'status' => 'dalam verifikasi', // Default: masuk antrean verifikasi
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
@@ -648,7 +656,8 @@ class MapidController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Laporan berhasil dikirim dan masuk ke antrean verifikasi!',
-            'data' => $report->load(['station', 'facility'])
+            'data' => $report->load(['station', 'facility']),
+            'data_source' => 'COMMUNITY_REPORTS_VERIFIED_FLOW',
         ], 201);
     }
 
@@ -667,39 +676,22 @@ class MapidController extends Controller
             ], 404);
         }
 
-        $newStatus = $request->input('status', 'disetujui'); // 'disetujui' or 'ditolak'
-        $report->status = $newStatus;
-        $report->save();
-
-        // Jika disetujui dan terkait fasilitas stasiun, perbarui ketersediaan fasilitas
-        if ($newStatus === 'disetujui') {
+        $validated = $request->validate(['status' => 'required|in:disetujui,ditolak', 'verification_notes' => 'nullable|string|max:2000']);
+        if ($report->status !== 'dalam verifikasi') return response()->json(['status' => 'error', 'message' => 'Hanya laporan dalam verifikasi yang dapat diproses.'], 409);
+        $newStatus = $validated['status'];
+        DB::transaction(function () use ($report, $newStatus, $validated, $request) {
+            $report->update(['status' => $newStatus, 'verified_by' => $request->user()->id, 'verified_at' => now(), 'verification_notes' => $validated['verification_notes'] ?? null]);
+            if ($newStatus !== 'disetujui') return;
             if ($report->facility_id) {
-                Facility::where('id', $report->facility_id)->update([
-                    'is_available' => false,
-                    'status_note' => "Dalam perbaikan: {$report->issue} (Verifikasi Laporan Komunitas)"
-                ]);
-            } else {
-                // Cari fasilitas yang namanya cocok dengan issue (e.g. lift/eskalator/toilet)
-                $keyword = null;
-                if (stripos($report->issue, 'lift') !== false) $keyword = 'Lift';
-                else if (stripos($report->issue, 'eskalator') !== false) $keyword = 'Eskalator';
-                else if (stripos($report->issue, 'toilet') !== false) $keyword = 'Toilet';
-
-                if ($keyword) {
-                    Facility::where('station_id', $report->station_id)
-                        ->where('facility_name', 'LIKE', "%{$keyword}%")
-                        ->update([
-                            'is_available' => false,
-                            'status_note' => "Terkendala: {$report->issue} (Verifikasi Laporan Komunitas)"
-                        ]);
-                }
+                Facility::where('id', $report->facility_id)->where('station_id', $report->station_id)->update(['is_available' => false, 'status_note' => "Terkendala: {$report->issue} (Verifikasi Laporan Komunitas)"]);
             }
-        }
+        });
 
         return response()->json([
             'status' => 'success',
-            'message' => "Laporan status diubah menjadi {$newStatus} dan data fasilitas telah diperbarui.",
-            'data' => $report->fresh(['station', 'facility'])
+            'message' => $newStatus === 'disetujui' ? 'Laporan disetujui dan fasilitas terkait diperbarui.' : 'Laporan ditolak tanpa mengubah fasilitas.',
+            'data' => $report->fresh(['station', 'facility']),
+            'data_source' => 'COMMUNITY_REPORTS_VERIFIED_FLOW',
         ]);
     }
 
@@ -1402,5 +1394,3 @@ class MapidController extends Controller
         return response()->json($result);
     }
 }
-
-
