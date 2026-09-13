@@ -55,6 +55,23 @@ export const askGeminiAi = async (prompt, stationId = null) => {
   }
 };
 
+export const explainRouteWithAi = async (routeContext) => {
+  const origin = routeContext?.origin?.name || routeContext?.route?.origin?.name || 'Titik Keberangkatan';
+  const destination = routeContext?.destination?.name || routeContext?.route?.destination?.name || 'Stasiun Tujuan';
+  const prompt = `Jelaskan secara mendalam rekomendasi rute perjalanan transit dari ${origin} ke ${destination} di Jakarta. Kenapa rute ini terbaik, bagaimana kondisi jalur pejalan kaki/skybridge, gerbong mana yang paling nyaman, dan pintu keluar mana yang paling dekat.`;
+  return askGeminiAi(prompt, routeContext?.destination?.id || routeContext?.route?.destination?.id);
+};
+
+export const getLiveTransitRealtime = async () => {
+  try {
+    const res = await api.get('/v1/transit/realtime');
+    return res.data;
+  } catch (err) {
+    console.error('Failed fetching live transit realtime:', err);
+    return { status: 'error', data: [] };
+  }
+};
+
 export const getGeoServerLayers = async (type = 'halte') => {
   try {
     const res = await api.get(`/v1/geoserver/layers?type=${type}`);

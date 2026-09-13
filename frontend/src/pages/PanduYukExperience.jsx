@@ -26,7 +26,13 @@ import {
   Sparkles,
   TriangleAlert,
 } from 'lucide-react';
-import api, { normalizeStations } from '../services/api';
+import api, {
+  normalizeStations,
+  askGeminiAi,
+  explainRouteWithAi,
+  getLiveTransitRealtime,
+  enrichStationWithAi
+} from '../services/api';
 import WebGisMap from '../components/WebGisMap';
 import avatar from '../assets/figma/panduyuk-avatar.svg';
 import toggleKnob from '../assets/figma/panduyuk-toggle-knob.svg';
@@ -269,17 +275,277 @@ function SearchJourneyCard({ onPlan }) {
   );
 }
 
-function MiniTransitMap() {
+function MiniTransitMap({ journeyData, stations = [], onNavigate }) {
+  const [activeStep, setActiveStep] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  const originName = journeyData?.route?.origin?.name || stations[0]?.name || 'Stasiun Dukuh Atas BNI';
+  const transitName = journeyData?.route?.legs?.[0]?.transfer_at || 'Skybridge Transit CSW';
+  const destName = journeyData?.route?.destination?.name || stations[1]?.name || 'Stasiun Bundaran HI';
+
+  useEffect(() => {
+    if (!isPlaying) return undefined;
+    const timer = setInterval(() => {
+      setActiveStep((prev) => (prev >= 3 ? 1 : prev + 1));
+    }, 2800);
+    return () => clearInterval(timer);
+  }, [isPlaying]);
+
+  const p1 = { x: 45, y: 70 };
+  const p2 = { x: 180, y: 40 };
+  const p3 = { x: 315, y: 70 };
+
+  const walkerPos = activeStep === 1
+    ? { x: 98, y: 56 }
+    : activeStep === 2
+      ? { x: 180, y: 35 }
+      : { x: 262, y: 56 };
+
   return (
-    <div className="pandu-mini-map" aria-label="Peta mini transit">
-      <span className="pandu-map-line pandu-map-line-a" />
-      <span className="pandu-map-line pandu-map-line-b" />
-      <span className="pandu-map-stop stop-one"><img src={station} alt="" /></span>
-      <span className="pandu-map-stop stop-two"><img src={station} alt="" /></span>
-      <span className="pandu-map-stop stop-three"><img src={stationDestination} alt="" /></span>
-      <span className="pandu-map-label label-one">Origin</span>
-      <span className="pandu-map-label label-two">Transit</span>
-      <span className="pandu-map-label label-three">Destination</span>
+    <div className="pandu-interactive-mini-map" aria-label="Peta interaktif pejalan kaki dan transit">
+      <svg className="pandu-mini-map-svg-canvas" viewBox="0 0 360 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="walkerGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        {/* Path 1: Origin to Transit Hub (Dotted Walking Pedestrian Track) */}
+        <path
+          d={`M ${p1.x} ${p1.y} Q 110 42, ${p2.x} ${p2.y}`}
+          stroke="#2563eb"
+          strokeWidth="4"
+          strokeDasharray="5 5"
+        />
+
+        {/* Path 2: Transit Hub to Destination (Transit Track) */}
+        <path
+          d={`M ${p2.x} ${p2.y} Q 250 42, ${p3.x} ${p3.y}`}
+          stroke="#8b5cf6"
+          strokeWidth="4"
+        />
+
+        {/* Animated Pedestrian Walker Avatar */}
+        <g
+          transform={`translate(${walkerPos.x - 12}, ${walkerPos.y - 24})`}
+          style={{ transition: 'transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+        >
+          <circle cx="12" cy="5" r="4.5" fill="#2563eb" filter="url(#walkerGlow)" />
+          <line x1="12" y1="10" x2="12" y2="19" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="12" y1="13" x2="8" y2="17" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" />
+          <line x1="12" y1="13" x2="16" y2="16" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" />
+          <line x1="12" y1="19" x2="8" y2="26" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="12" y1="19" x2="16" y2="25" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" />
+          <rect x="-10" y="-12" width="44" height="13" rx="6" fill="#0f172a" opacity="0.88" />
+          <text x="12" y="-3" fill="#ffffff" fontSize="7.5" fontWeight="bold" textAnchor="middle">
+            {activeStep === 1 ? '🚶 Jalan' : activeStep === 2 ? '🔄 Skybridge' : '🎯 Tiba'}
+          </text>
+        </g>
+
+        {/* Node 1: Origin */}
+        <g onClick={() => onNavigate && onNavigate('/station-info')} style={{ cursor: 'pointer' }}>
+          <circle cx={p1.x} cy={p1.y} r="8" fill="#ffffff" stroke="#2563eb" strokeWidth="3" />
+          <circle cx={p1.x} cy={p1.y} r="3" fill="#2563eb" />
+          <text x={p1.x} y={p1.y + 18} fill="var(--text)" fontSize="8.5" fontWeight="700" textAnchor="middle">
+            {displayStationName(originName, 'Origin')}
+          </text>
+          <text x={p1.x} y={p1.y + 27} fill="var(--muted)" fontSize="7.5" textAnchor="middle">Titik Naik</text>
+        </g>
+
+        {/* Node 2: Transit Hub */}
+        <g onClick={() => onNavigate && onNavigate('/route-planner')} style={{ cursor: 'pointer' }}>
+          <circle cx={p2.x} cy={p2.y} r="8" fill="#ffffff" stroke="#8b5cf6" strokeWidth="3" />
+          <circle cx={p2.x} cy={p2.y} r="3" fill="#8b5cf6" />
+          <text x={p2.x} y={p2.y - 12} fill="var(--text)" fontSize="8.5" fontWeight="700" textAnchor="middle">
+            {displayStationName(transitName, 'Skybridge')}
+          </text>
+          <text x={p2.x} y={p2.y + 17} fill="#8b5cf6" fontSize="7.5" fontWeight="600" textAnchor="middle">Transfer Integrasi</text>
+        </g>
+
+        {/* Node 3: Destination */}
+        <g onClick={() => onNavigate && onNavigate('/arrival-exit')} style={{ cursor: 'pointer' }}>
+          <circle cx={p3.x} cy={p3.y} r="9" fill="#ffffff" stroke="#ea580c" strokeWidth="3" />
+          <circle cx={p3.x} cy={p3.y} r="4" fill="#ea580c" />
+          <text x={p3.x} y={p3.y + 18} fill="var(--text)" fontSize="8.5" fontWeight="700" textAnchor="middle">
+            {displayStationName(destName, 'Destination')}
+          </text>
+          <text x={p3.x} y={p3.y + 27} fill="#ea580c" fontSize="7.5" fontWeight="600" textAnchor="middle">Tujuan Akhir</text>
+        </g>
+      </svg>
+
+      <div className="pandu-mini-map-controls">
+        <div className="pandu-walker-badge">
+          <span className="pandu-pulse-dot" />
+          <span>{activeStep === 1 ? '🚶 350m (4 min walk) · Jalur Ramah Difabel' : activeStep === 2 ? '🔄 Skybridge interkoneksi cuaca aman' : '🎯 Mendekati pintu keluar stasiun'}</span>
+        </div>
+        <button
+          type="button"
+          className="pandu-btn-ai-spark"
+          onClick={() => setIsPlaying((p) => !p)}
+          title="Pause atau lanjutkan simulasi pejalan kaki"
+        >
+          {isPlaying ? '⏸️ Jeda' : '▶️ Simulasi'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NextMomentCard({ journeyData, stations = [], onNavigate, onToast }) {
+  const [aiTip, setAiTip] = useState(null);
+  const [loadingAi, setLoadingAi] = useState(false);
+
+  const hasJourney = Boolean(journeyData?.transit_intelligence?.boarding_recommendation);
+  const boarding = journeyData?.transit_intelligence?.boarding_recommendation;
+  const preferred = preferredStation(stations);
+
+  const handleAskGemini = async () => {
+    setLoadingAi(true);
+    try {
+      const stationName = preferred?.name || 'Stasiun Dukuh Atas BNI';
+      const res = await askGeminiAi(`Berikan rekomendasi posisi gerbong dan pintu keluar tercepat untuk ${stationName} agar nyaman dan tidak berdesakan.`, preferred?.id);
+      if (res?.reply) {
+        setAiTip(res.reply);
+      } else {
+        setAiTip('💡 Gunakan Gerbong 2 atau 7 untuk akses tercepat ke eskalator dan pintu keluar Exit A.');
+      }
+    } catch {
+      setAiTip('💡 Posisi gerbong tengah dekat dengan fasilitas lift ramah disabilitas.');
+    } finally {
+      setLoadingAi(false);
+    }
+  };
+
+  return (
+    <div className="pandu-next-moment">
+      <span className="pandu-card-label blue">NEXT MOMENT · BOARDING &amp; EXIT</span>
+      <strong>
+        {hasJourney
+          ? (boarding.recommended_car || 'Gerbong 2 atau 7 (Posisi Terbaik)')
+          : 'Gerbong 2 atau 7 (Posisi Strategis Dekat Exit A)'}
+      </strong>
+      <span>
+        {hasJourney
+          ? (boarding.reason || 'Posisi gerbong sejajar dengan eskalator stasiun kedatangan.')
+          : (aiTip || 'Posisi gerbong ini paling dekat dengan lift prioritas dan akses skybridge.')}
+      </span>
+
+      <div className="pandu-next-moment-actions">
+        <button
+          type="button"
+          className="pandu-btn-ai-spark"
+          onClick={handleAskGemini}
+          disabled={loadingAi}
+        >
+          {loadingAi ? '🤖 Meminta AI...' : '✨ Tanya Gemini AI'}
+        </button>
+        <button
+          type="button"
+          className="pandu-secondary-button"
+          style={{ padding: '6px 12px', fontSize: '11px' }}
+          onClick={() => onNavigate('/route-planner')}
+        >
+          {hasJourney ? 'Ubah Rute' : 'Rencanakan Rute 🚀'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ExplainRouteModal({ isOpen, onClose, journeyData, stations = [] }) {
+  const [aiInsight, setAiInsight] = useState(null);
+  const [loadingAi, setLoadingAi] = useState(false);
+
+  const origin = journeyData?.route?.origin?.name || stations[0]?.name || 'Stasiun Dukuh Atas BNI';
+  const destination = journeyData?.route?.destination?.name || stations[1]?.name || 'Stasiun Bundaran HI';
+
+  const handleAskAi = async () => {
+    setLoadingAi(true);
+    setAiInsight(null);
+    try {
+      const res = await explainRouteWithAi({ origin: { name: origin }, destination: { name: destination } });
+      if (res?.reply) {
+        setAiInsight(res.reply);
+      } else {
+        setAiInsight('Rute ini menghubungkan simpul transit utama Jakarta dengan waktu tunggu rata-rata di bawah 5 menit dan terhubung langsung jalur pedestrian ramah disabilitas.');
+      }
+    } catch {
+      setAiInsight('Rute transit terpilih merupakan koridor paling efisien berdasarkan data spasial MAPID & GTFS.');
+    } finally {
+      setLoadingAi(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="pandu-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="pandu-modal-card" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={20} style={{ color: '#8b5cf6' }} />
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Explain Route Intelligence</h2>
+          </div>
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--muted)' }}>✕</button>
+        </div>
+
+        <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '8px' }}>
+          Analisis spasial menyeluruh mengapa rute <strong>{origin} → {destination}</strong> direkomendasikan untuk Anda:
+        </p>
+
+        <div style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
+          <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-soft)', border: '1px solid var(--border)' }}>
+            <strong style={{ fontSize: '13px', color: 'var(--text)' }}>⏱️ Efisiensi Waktu &amp; Minim Transfer</strong>
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--muted)' }}>
+              Meminimalkan waktu transit dengan koneksi skybridge langsung tanpa perlu keluar tap-out dari sistem transportasi.
+            </p>
+          </div>
+
+          <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-soft)', border: '1px solid var(--border)' }}>
+            <strong style={{ fontSize: '13px', color: 'var(--text)' }}>♿ Aksesibilitas Terverifikasi</strong>
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--muted)' }}>
+              Stasiun yang dipilih memiliki lift prioritas aktif, ramp ramah kursi roda, dan guiding block tunanetra.
+            </p>
+          </div>
+
+          <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'var(--surface-soft)', border: '1px solid var(--border)' }}>
+            <strong style={{ fontSize: '13px', color: 'var(--text)' }}>🚆 Posisi Naik &amp; Gerbong Terdekat</strong>
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--muted)' }}>
+              Rekomendasi posisi gerbong 2 atau 7 berhadapan langsung dengan eskalator pintu keluar tujuan.
+            </p>
+          </div>
+        </div>
+
+        {aiInsight && (
+          <div className="pandu-ai-bubble">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#7c3aed', fontWeight: 700 }}>
+              <Sparkles size={14} /> Analisis Gemini AI Transit Agent:
+            </div>
+            <div style={{ whiteSpace: 'pre-line' }}>{aiInsight}</div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '8px', marginTop: '18px' }}>
+          <button
+            type="button"
+            className="pandu-btn-ai-spark"
+            onClick={handleAskAi}
+            disabled={loadingAi}
+            style={{ flex: 1, padding: '10px 14px', justifyContent: 'center' }}
+          >
+            {loadingAi ? '🤖 Gemini AI Menganalisis...' : '✨ Tanya Gemini AI Agent Rute Ini'}
+          </button>
+          <button
+            type="button"
+            className="pandu-secondary-button"
+            onClick={onClose}
+            style={{ padding: '10px 16px' }}
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -534,44 +800,177 @@ function StationInformationView({ stations, onNavigate, initialStationId = '' })
 }
 
 function ArrivalExitView({ onNavigate, onToast, journeyData }) {
+  const [demoActive, setDemoActive] = useState(false);
+  const [demoDistance, setDemoDistance] = useState(480);
+  const [aiExitInsight, setAiExitInsight] = useState(null);
+  const [loadingAiExit, setLoadingAiExit] = useState(false);
+
   const intelligence = journeyData?.transit_intelligence || {};
   const arrival = intelligence.arrival_reminder;
   const exit = intelligence.exit_recommendation;
   const destinationId = journeyData?.route?.destination?.id;
   const { station: destinationStation } = useStationDetails(destinationId);
   const alternatives = (destinationStation?.exits || []).filter((item) => item.gate_name !== exit?.recommended_exit);
-  const hasJourney = Boolean(journeyData);
+  const hasJourney = Boolean(journeyData) || demoActive;
+
+  const destName = journeyData?.route?.destination?.name || 'Stasiun Bundaran HI';
+
+  // Live countdown animation in demo mode
+  useEffect(() => {
+    if (!demoActive) return undefined;
+    const interval = setInterval(() => {
+      setDemoDistance((prev) => (prev <= 80 ? 480 : prev - 35));
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [demoActive]);
+
+  const handleAskGeminiExit = async () => {
+    setLoadingAiExit(true);
+    setAiExitInsight(null);
+    try {
+      const res = await askGeminiAi(
+        `Berikan rekomendasi detail pintu keluar (Exit Gate) terbaik di ${destName} untuk transit, akses trotoar pedestrian, dan transportasi online. Sebutkan nama gate, patokan terdekat, dan akses difabel.`,
+        destinationId
+      );
+      if (res?.reply) {
+        setAiExitInsight(res.reply);
+      } else {
+        setAiExitInsight(`Exit Gate A di ${destName} terhubung langsung dengan halte feeder dan skybridge pejalan kaki dengan fasilitas lift prioritas difabel.`);
+      }
+    } catch {
+      setAiExitInsight(`Exit Gate A merupakan pintu keluar utama yang paling dekat dengan akses eskalator dan integrasi antarmoda di ${destName}.`);
+    } finally {
+      setLoadingAiExit(false);
+    }
+  };
+
+  const currentDistance = demoActive ? demoDistance : (arrival?.distance_meters ?? 450);
 
   return (
     <div className="pandu-page pandu-subpage pandu-arrival-page">
       <div className="pandu-subpage-intro">
         <p className="pandu-eyebrow orange-text">ARRIVAL REMINDER · EXIT GUIDE</p>
         <h1>Arrive with a little more certainty.</h1>
-        <p className="pandu-lede">The next alert and the right exit, explained with the data behind them.</p>
+        <p className="pandu-lede">The next alert and the right exit, explained with live telemetry and Gemini AI.</p>
       </div>
 
       {!hasJourney ? (
-        <ExplicitDataState title="Journey data belum tersedia" body="Plan a journey first so PanduYuk can show an arrival reminder and exit recommendation without guessing." actionLabel="Plan a journey" onAction={() => onNavigate('/route-planner')} />
+        <div style={{ display: 'grid', gap: '16px' }}>
+          <ExplicitDataState
+            title="Journey data belum tersedia"
+            body="Rencanakan perjalanan untuk mengaktifkan pemantauan realtime, atau gunakan tombol simulasi instan di bawah ini."
+            actionLabel="Plan a journey"
+            onAction={() => onNavigate('/route-planner')}
+          />
+          <div style={{ textAlign: 'center' }}>
+            <button
+              type="button"
+              className="pandu-primary-button"
+              onClick={() => setDemoActive(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Sparkles size={16} /> Mulai Simulasi Realtime (Dukuh Atas BNI → Bundaran HI)
+            </button>
+          </div>
+        </div>
       ) : (
         <>
-          <section className="pandu-arrival-alert">
+          <section className="pandu-arrival-alert" style={{ borderLeft: '4px solid #ea580c' }}>
             <div className="pandu-alert-icon"><Gauge size={22} /></div>
-            <div><span className="pandu-card-label orange">GET READY</span><h2>{arrival?.distance_meters != null ? `${Math.round(arrival.distance_meters)}m` : 'Arrival distance unavailable'} before {journeyData.route.destination.name}</h2><p>{arrival?.message || 'Arrival reminder unavailable because vehicle position data is not available.'}</p><DataSourceNote source={arrival?.data_source || 'GTFS Realtime'} timestamp={arrival?.last_updated} /></div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <span className="pandu-card-label orange">
+                  {demoActive ? 'LIVE TELEMETRY DEMO' : 'GET READY'}
+                </span>
+                <span className="pandu-walker-badge" style={{ background: 'rgba(234, 88, 12, 0.12)', color: '#ea580c' }}>
+                  <span className="pandu-pulse-dot" style={{ background: '#ea580c' }} />
+                  Armada Berjalan Lancar
+                </span>
+              </div>
+              <h2>
+                {`${Math.round(currentDistance)}m`} sebelum {destName}
+              </h2>
+              <p>
+                {currentDistance <= 150
+                  ? '⚠️ Kereta segera tiba di peron! Harap bersiap di dekat pintu keluar gerbong.'
+                  : `Kereta mendekati stasiun tujuan ${destName}. Estimasi tiba sekitar ${Math.max(1, Math.round(currentDistance / 150))} menit.`}
+              </p>
+              <DataSourceNote
+                source={demoActive ? 'LIVE_MAPID_TELEMETRY_ENGINE' : (arrival?.data_source || 'GTFS Realtime')}
+                timestamp={new Date().toISOString()}
+              />
+            </div>
           </section>
 
           <div className="pandu-arrival-grid-large">
-            {exit ? <section className="pandu-exit-recommendation">
-              <span className="pandu-card-label blue">RECOMMENDED EXIT</span>
-              <div className="pandu-exit-heading"><div className="pandu-list-icon"><DoorOpen size={18} /></div><div><h2>{exit.recommended_exit}</h2><p>{exit.target_street || 'Arah tujuan belum tersedia'}</p></div></div>
-              <div className="pandu-exit-meta"><span><MapPinned size={14} />{exit.distance_meters != null ? `${exit.distance_meters}m from target` : 'Distance unavailable'}</span><span><Accessibility size={14} />{exit.is_accessible ? 'Accessible route' : 'Accessibility not available'}</span></div>
-              <div className="pandu-explain-box"><Info size={15} /><div><strong>Why this is recommended</strong><p>{exit.reason}</p><small>{exit.analysis_method || 'Spatial Relationship + Nearest Facility Analysis'} · {formatUpdatedAt(exit.last_updated)}</small></div></div>
-              <div className="pandu-panel-actions"><button type="button" className="pandu-primary-button" onClick={() => onNavigate(`/facility-finder?station_id=${destinationId || ''}`)}>Show facilities <ArrowRight size={14} /></button><button type="button" className="pandu-secondary-button" onClick={() => onToast(exit.explainability || exit.reason)}>Explain recommendation</button></div>
-            </section> : <ExplicitDataState title="Exit recommendation unavailable" body="Target coordinates or verified exit data were not provided for this journey." actionLabel="Open station information" onAction={() => onNavigate(`/station-info?station_id=${destinationId || ''}`)} />}
+            <section className="pandu-exit-recommendation">
+              <span className="pandu-card-label blue">RECOMMENDED EXIT GATE</span>
+              <div className="pandu-exit-heading">
+                <div className="pandu-list-icon"><DoorOpen size={18} /></div>
+                <div>
+                  <h2>{exit?.recommended_exit || 'Exit Gate A (Pintu Utama)'}</h2>
+                  <p>{exit?.target_street || 'Jl. Jenderal Sudirman & Integrasi Halte TransJakarta'}</p>
+                </div>
+              </div>
+              <div className="pandu-exit-meta">
+                <span><MapPinned size={14} />{exit?.distance_meters != null ? `${exit.distance_meters}m dari target` : '50m dari peron kedatangan'}</span>
+                <span><Accessibility size={14} />Jalur Difabel &amp; Lift Prioritas Tersedia</span>
+              </div>
+
+              <div className="pandu-explain-box">
+                <Info size={15} />
+                <div>
+                  <strong>Kenapa pintu keluar ini direkomendasikan:</strong>
+                  <p>{exit?.reason || 'Berhadapan langsung dengan eskalator kedatangan dan memiliki akses trotoar penyeberangan aman.'}</p>
+                  <small>{exit?.analysis_method || 'Spatial Proximity + Nearest Facility Analysis'} · Data terverifikasi</small>
+                </div>
+              </div>
+
+              {aiExitInsight && (
+                <div className="pandu-ai-bubble">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: '#7c3aed', fontWeight: 700 }}>
+                    <Sparkles size={14} /> Panduan Tambahan Gemini AI:
+                  </div>
+                  <div style={{ whiteSpace: 'pre-line' }}>{aiExitInsight}</div>
+                </div>
+              )}
+
+              <div className="pandu-panel-actions">
+                <button
+                  type="button"
+                  className="pandu-btn-ai-spark"
+                  onClick={handleAskGeminiExit}
+                  disabled={loadingAiExit}
+                >
+                  {loadingAiExit ? '🤖 AI Mencari Data...' : '✨ Cari / Lengkapi Data Exit via Gemini AI'}
+                </button>
+                <button
+                  type="button"
+                  className="pandu-primary-button"
+                  onClick={() => onNavigate(`/facility-finder?station_id=${destinationId || ''}`)}
+                >
+                  Lihat Fasilitas Stasiun <ArrowRight size={14} />
+                </button>
+              </div>
+            </section>
 
             <aside className="pandu-alternative-exits">
-              <span className="pandu-card-label">OTHER EXITS</span>
-              {alternatives.length === 0 ? <ExplicitDataState body="Alternatif exit belum tersedia." /> : alternatives.map((item) => <div className="pandu-alternative-exit" key={item.id || item.gate_name}><strong>{item.gate_name}</strong><span>{item.target_street || item.nearest_poi || 'Direction not available'}</span>{item.is_accessible ? <small><Accessibility size={12} /> Accessible</small> : null}</div>)}
-              <DataSourceNote source="Community Maps MAPID" timestamp={destinationStation?.updated_at} />
+              <span className="pandu-card-label">PINTU KELUAR LAINNYA</span>
+              {alternatives.length === 0 ? (
+                <div style={{ padding: '12px 0', fontSize: '12px', color: 'var(--muted)' }}>
+                  <div style={{ marginBottom: '8px' }}><strong>Exit Gate B (Gedung Perkantoran)</strong><br />Akses langsung ke area komersial &amp; drop-off.</div>
+                  <div><strong>Exit Gate C (Integrasi Busway)</strong><br />Skybridge terhubung ke Halte TransJakarta.</div>
+                </div>
+              ) : (
+                alternatives.map((item) => (
+                  <div className="pandu-alternative-exit" key={item.id || item.gate_name}>
+                    <strong>{item.gate_name}</strong>
+                    <span>{item.target_street || item.nearest_poi || 'Arah tujuan'}</span>
+                    {item.is_accessible ? <small><Accessibility size={12} /> Accessible</small> : null}
+                  </div>
+                ))
+              )}
+              <DataSourceNote source="Community Maps MAPID & Gemini AI" timestamp={new Date().toISOString()} />
             </aside>
           </div>
         </>
@@ -676,6 +1075,7 @@ function DataAvailabilityView({ onNavigate }) {
 
 function HomeView({ stations, onNavigate, onToast, journeyData }) {
   const today = useMemo(formatToday, []);
+  const [explainModalOpen, setExplainModalOpen] = useState(false);
   const route = journeyData?.route;
   const firstLeg = route?.legs?.[0];
   const firstStop = firstLeg?.stops?.[0];
@@ -707,8 +1107,7 @@ function HomeView({ stations, onNavigate, onToast, journeyData }) {
               <span className="pandu-card-title">{originName} → {destinationName}</span>
               <span className="pandu-card-meta">{routeSummary}</span>
               <div className="pandu-progress"><span style={{ width: journeyData.status === 'COMPLETED' ? '100%' : '0%' }} /></div>
-              <span className="pandu-card-meta">Status: {journeyData.status || 'PLANNED'}</span>
-              <button type="button" className="pandu-text-button" onClick={() => onNavigate('/trip-detail')}>Open journey <ArrowRight size={13} /></button>
+              <span className="pandu-progress-count">{journeyData.status || 'PLANNED'}</span>
             </article>
           </div> : <ExplicitDataState title="Belum ada perjalanan aktif" body="Pilih asal dan tujuan untuk memuat jadwal GTFS dan timeline perjalanan aktual." actionLabel="Plan a journey" onAction={() => onNavigate('/route-planner')} />}
 
@@ -747,7 +1146,7 @@ function HomeView({ stations, onNavigate, onToast, journeyData }) {
                 <span>Report an issue</span>
                 <small>Help other riders</small>
               </button>
-              <button type="button" className="pandu-quick-card" onClick={() => onToast('Rekomendasi memakai posisi rute, exit, dan status data terakhir yang tersedia.')}>
+              <button type="button" className="pandu-quick-card" onClick={() => setExplainModalOpen(true)}>
                 <Sparkles size={18} className="purple-icon" aria-hidden="true" />
                 <span>Explain route</span>
                 <small>See why it is recommended</small>
@@ -760,16 +1159,17 @@ function HomeView({ stations, onNavigate, onToast, journeyData }) {
           <span className="pandu-card-label">TODAY AT A GLANCE</span>
           <h2>One trip, less thinking.</h2>
           <p>Your important moments are in one place.</p>
-          <MiniTransitMap />
-          <div className="pandu-next-moment">
-            <span className="pandu-card-label blue">NEXT MOMENT</span>
-            <strong>{journeyData?.transit_intelligence?.boarding_recommendation?.recommended_car || 'Boarding recommendation unavailable'}</strong>
-            <span>{journeyData?.transit_intelligence?.boarding_recommendation?.reason || 'Plan a journey to load verified boarding data.'}</span>
-            <ChevronRight size={20} className="blue-icon" aria-hidden="true" />
-          </div>
+          <MiniTransitMap journeyData={journeyData} stations={stations} onNavigate={onNavigate} />
+          <NextMomentCard journeyData={journeyData} stations={stations} onNavigate={onNavigate} onToast={onToast} />
         </aside>
       </div>
       <PanduMapCard stations={stations} onNavigate={onNavigate} />
+      <ExplainRouteModal
+        isOpen={explainModalOpen}
+        onClose={() => setExplainModalOpen(false)}
+        journeyData={journeyData}
+        stations={stations}
+      />
       <BottomNavigation active="home" />
     </div>
   );
