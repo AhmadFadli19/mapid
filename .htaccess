@@ -5,10 +5,11 @@
 
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
-        Options -MultiViews -Indexes
+        Options -MultiViews
     </IfModule>
 
     RewriteEngine On
+    RewriteBase /
     CGIPassAuth On
 
     # --------------------------------------------------------------------------
@@ -56,5 +57,7 @@
     </IfModule>
 </FilesMatch>
 
-# Disable Directory Browsing
-Options -Indexes
+# Disable Directory Browsing safely without throwing 500 error
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>

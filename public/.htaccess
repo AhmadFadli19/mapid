@@ -1,19 +1,20 @@
 # ==============================================================================
-# Laravel Public .htaccess (High Performance & Security)
+# Laravel Public .htaccess (High Performance & Shared Hosting Compatibility)
 # Project: PanduYuk Transit Intelligence & WebGIS
 # ==============================================================================
 
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
-        Options -MultiViews -Indexes
+        Options -MultiViews
     </IfModule>
 
     RewriteEngine On
+    RewriteBase /
     CGIPassAuth On
 
     # --------------------------------------------------------------------------
     # 1. AUTHENTICATION: Ensure Authorization Header (Bearer / Sanctum Tokens)
-    #    Many Apache / FastCGI setups strip this header by default.
+    #    Many Apache / FastCGI / LiteSpeed setups strip this header by default.
     # --------------------------------------------------------------------------
     <IfModule mod_setenvif.c>
         SetEnvIfNoCase ^Authorization$ "(.+)" HTTP_AUTHORIZATION=$1
@@ -111,5 +112,7 @@
     ExpiresByType font/ttf "access plus 1 year"
 </IfModule>
 
-# Disable Directory Browsing
-Options -Indexes
+# Disable Directory Browsing safely without throwing 500 error
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
