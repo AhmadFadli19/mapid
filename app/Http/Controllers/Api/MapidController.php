@@ -29,19 +29,33 @@ class MapidController extends Controller
     {
         $operator = $request->query('operator');
         $bbox = $request->query('bbox');
-        $limit = (int)$request->query('limit', 300);
+        $search = $request->query('search') ?: $request->query('q');
+        $simple = $request->boolean('simple') || $request->boolean('summary');
+        $limit = (int)$request->query('limit', 800);
 
-        $query = Station::with([
-            'facilities',
-            'exits',
-            'tenants' => function ($q) {
-                $q->where('is_active', true);
-            },
-            'communityReports' => function ($q) {
-                $q->latest()->limit(5);
-            },
-            'boardingRecommendations'
-        ]);
+        if ($simple) {
+            $query = Station::query();
+        } else {
+            $query = Station::with([
+                'facilities',
+                'exits',
+                'tenants' => function ($q) {
+                    $q->where('is_active', true);
+                },
+                'communityReports' => function ($q) {
+                    $q->latest()->limit(5);
+                },
+                'boardingRecommendations'
+            ]);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('code', 'LIKE', "%{$search}%")
+                  ->orWhere('address', 'LIKE', "%{$search}%");
+            });
+        }
 
         if ($operator && $operator !== 'ALL') {
             $query->where('operator', 'LIKE', "%{$operator}%");
@@ -57,10 +71,19 @@ class MapidController extends Controller
                 $query->whereBetween('longitude', [$minLon, $maxLon])
                       ->whereBetween('latitude', [$minLat, $maxLat]);
             }
-        } else {
-            if ($limit > 0) {
-                $query->limit($limit);
-            }
+        }
+
+        // Prioritize Rail Transit (MRT, LRT, KRL) and iconic stops at the top
+        $query->orderByRaw("CASE 
+            WHEN operator LIKE '%MRT%' THEN 1 
+            WHEN operator LIKE '%LRT%' THEN 2 
+            WHEN operator LIKE '%KRL%' THEN 3 
+            WHEN code LIKE 'TJ_%' THEN 4 
+            ELSE 5 
+        END ASC, name ASC");
+
+        if ($limit > 0) {
+            $query->limit($limit);
         }
 
         $stations = $query->get();

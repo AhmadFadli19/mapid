@@ -2957,3 +2957,145 @@
   line-height: 1.6;
 }
 
+/* ========================================================
+   Quick Trips & Station Search in "Where are you going?"
+   ======================================================== */
+.pandu-quick-trips-section {
+  margin-top: 14px;
+  margin-bottom: 18px;
+}
+
+.pandu-quick-trips-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.pandu-quick-trips-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pandu-quick-trip-btn {
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pandu-quick-trip-btn:hover {
+  background: var(--blue-soft, rgba(2, 132, 199, 0.1));
+  border-color: var(--blue, #0284c7);
+  color: var(--blue, #0284c7);
+  transform: translateY(-1px);
+}
+
+.pandu-search-stations-wrap {
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.pandu-search-stations-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 16px 10px 38px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.pandu-search-stations-input:focus {
+  border-color: var(--blue, #0284c7);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.pandu-search-stations-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.pandu-ai-advice-card {
+  margin-top: 18px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(14, 165, 233, 0.08) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.pandu-ai-advice-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.pandu-ai-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.12);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.pandu-ai-advice-source {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pandu-ai-advice-body {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre-line;
+}
+
+.pandu-route-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.pandu-smart-router-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #059669;
+  background: rgba(5, 150, 105, 0.12);
+  border: 1px solid rgba(5, 150, 105, 0.25);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+

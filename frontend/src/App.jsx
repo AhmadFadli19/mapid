@@ -43,7 +43,7 @@ export default function App() {
   useEffect(() => {
     if (!localStorage.getItem('mapid_user')) localStorage.setItem('mapid_user', JSON.stringify(DEFAULT_USER));
 
-    api.get('/stations').then((response) => {
+    api.get('/stations?limit=800').then((response) => {
       const nextStations = normalizeStations(response.data);
       if (nextStations.length > 0) setStations(nextStations);
     }).catch(() => {});

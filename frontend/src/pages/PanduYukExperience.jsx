@@ -1307,6 +1307,7 @@ function RouteMapPanel({ route }) {
 function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
   const [originId, setOriginId] = useState('');
   const [destinationId, setDestinationId] = useState('');
+  const [stationSearch, setStationSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [routeReady, setRouteReady] = useState(false);
   const [routeAttempted, setRouteAttempted] = useState(false);
@@ -1332,25 +1333,69 @@ function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
     setSelectedRouteIndex(0);
   }, [journeyData]);
 
-  const handleFindRoutes = async (event) => {
-    event.preventDefault();
-    if (!originId || !destinationId) return;
+  // Group stations by Transit Mode / Operator for intuitive browsing
+  const groupedStations = useMemo(() => {
+    const q = (stationSearch || '').toLowerCase().trim();
+    const filtered = q
+      ? stations.filter((s) => (s.name || '').toLowerCase().includes(q) || (s.operator || '').toLowerCase().includes(q) || (s.address || '').toLowerCase().includes(q))
+      : stations;
+
+    const mrt = filtered.filter((s) => (s.operator || '').toUpperCase().includes('MRT'));
+    const krl = filtered.filter((s) => (s.operator || '').toUpperCase().includes('KRL') || (s.operator || '').toUpperCase().includes('COMMUTER'));
+    const lrt = filtered.filter((s) => (s.operator || '').toUpperCase().includes('LRT'));
+    const tj = filtered.filter((s) => !s.operator || (s.operator || '').toUpperCase().includes('TRANS') || (s.operator || '').toUpperCase().includes('TIJE'));
+    const others = filtered.filter((s) => !mrt.includes(s) && !krl.includes(s) && !lrt.includes(s) && !tj.includes(s));
+
+    return [
+      { label: '🚇 MRT Jakarta', items: mrt },
+      { label: '🚆 KRL Commuter Line', items: krl },
+      { label: '🚝 LRT Jabodebek & Jakarta', items: lrt },
+      { label: '🚌 TransJakarta BRT & Halte', items: tj },
+      { label: '📍 Transit Lainnya', items: others },
+    ].filter((g) => g.items.length > 0);
+  }, [stations, stationSearch]);
+
+  const quickTrips = useMemo(() => [
+    { label: '🚇 Bundaran HI → Blok M', orig: 'Bundaran HI', dest: 'Blok M' },
+    { label: '🚇 Dukuh Atas → Lebak Bulus', orig: 'Dukuh Atas', dest: 'Lebak Bulus' },
+    { label: '🚆 Manggarai → Sudirman', orig: 'Manggarai', dest: 'Sudirman' },
+    { label: '🚝 LRT Cawang → Dukuh Atas', orig: 'Cawang', dest: 'Dukuh Atas' },
+    { label: '🚌 Harmoni → Senen', orig: 'Harmoni', dest: 'Senen' },
+  ], []);
+
+  const executeRouteSearch = async (origId, destId) => {
+    if (!origId || !destId) return;
     setRouteAttempted(true);
     setLoading(true);
     try {
-      const response = await api.get(`/v1/route/plan?origin_id=${originId}&destination_id=${destinationId}`);
+      const response = await api.get(`/v1/route/plan?origin_id=${origId}&destination_id=${destId}`);
       const data = response.data?.data || null;
       setJourneyData(data);
       setRouteReady(Boolean(data));
       setSelectedRouteIndex(0);
       if (data) onJourneyReady(data);
-    } catch {
+    } catch (err) {
       setRouteReady(false);
       setJourneyData(null);
-      onToast('Data rute belum tersedia untuk kombinasi ini. Pilih titik transit lain.');
+      onToast(err.response?.data?.message || 'Data rute belum tersedia untuk kombinasi ini.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleQuickTrip = (trip) => {
+    const o = stations.find((s) => (s.name || '').toLowerCase().includes(trip.orig.toLowerCase()));
+    const d = stations.find((s) => (s.name || '').toLowerCase().includes(trip.dest.toLowerCase()) && s.id !== o?.id);
+    if (o && d) {
+      setOriginId(o.id);
+      setDestinationId(d.id);
+      executeRouteSearch(o.id, d.id);
+    }
+  };
+
+  const handleFindRoutes = async (event) => {
+    if (event) event.preventDefault();
+    executeRouteSearch(originId, destinationId);
   };
 
   return (
@@ -1358,55 +1403,115 @@ function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
       <div className="pandu-subpage-intro">
         <p className="pandu-eyebrow blue-text">ONE SIMPLE QUESTION</p>
         <h1>Where are you going?</h1>
-        <p className="pandu-lede">Choose your start and destination. We’ll take care of the details.</p>
+        <p className="pandu-lede">Pilih titik asal dan tujuan transit Anda. PanduYuk menyusun rute multi-modal paling nyaman secara instan.</p>
       </div>
 
       <div className="pandu-plan-grid">
         <form className="pandu-form-card" onSubmit={handleFindRoutes}>
-          <span className="pandu-card-label">YOUR JOURNEY</span>
-          <label htmlFor="origin">From</label>
+          <span className="pandu-card-label">RENCANA PERJALANAN</span>
+
+          {/* Quick Popular Trips */}
+          <div className="pandu-quick-trips-section">
+            <span className="pandu-quick-trips-title">Rute Populer Cepat</span>
+            <div className="pandu-quick-trips-list">
+              {quickTrips.map((qt) => (
+                <button
+                  key={qt.label}
+                  type="button"
+                  className="pandu-quick-trip-btn"
+                  onClick={() => handleQuickTrip(qt)}
+                >
+                  {qt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Search Filter */}
+          <div className="pandu-search-stations-wrap">
+            <span className="pandu-search-stations-icon">🔍</span>
+            <input
+              type="text"
+              className="pandu-search-stations-input"
+              placeholder="Cari stasiun atau halte (cth: Dukuh Atas, Bundaran HI, Bogor)..."
+              value={stationSearch}
+              onChange={(e) => setStationSearch(e.target.value)}
+            />
+          </div>
+
+          <label htmlFor="origin">Titik Keberangkatan (Asal)</label>
           <div className="pandu-select-wrap blue-field">
             <span className="pandu-field-dot" />
             <select id="origin" value={originId} onChange={(event) => setOriginId(event.target.value)} required>
-              <option value="">Choose a station or stop</option>
-              {stations.map((station) => <option key={`origin-${station.id}`} value={station.id}>{station.name}</option>)}
+              <option value="">Pilih stasiun atau halte asal...</option>
+              {groupedStations.map((group) => (
+                <optgroup key={`origin-grp-${group.label}`} label={group.label}>
+                  {group.items.map((station) => (
+                    <option key={`origin-${station.id}`} value={station.id}>
+                      {station.name} ({station.operator || 'Transit'})
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
           </div>
-          <label htmlFor="destination">To</label>
+
+          <label htmlFor="destination">Titik Tujuan</label>
           <div className="pandu-select-wrap orange-field">
             <span className="pandu-field-dot" />
             <select id="destination" value={destinationId} onChange={(event) => setDestinationId(event.target.value)} required>
-              <option value="">Choose a destination</option>
-              {stations.map((station) => <option key={`destination-${station.id}`} value={station.id}>{station.name}</option>)}
+              <option value="">Pilih stasiun atau halte tujuan...</option>
+              {groupedStations.map((group) => (
+                <optgroup key={`dest-grp-${group.label}`} label={group.label}>
+                  {group.items.map((station) => (
+                    <option key={`dest-${station.id}`} value={station.id}>
+                      {station.name} ({station.operator || 'Transit'})
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
           </div>
-          <label htmlFor="when">When</label>
+
+          <label htmlFor="when">Waktu Berangkat</label>
           <div className="pandu-plan-actions">
             <select id="when" className="pandu-when-select" defaultValue="now">
-              <option value="now">Leave now</option>
-              <option value="later">Leave later</option>
+              <option value="now">Berangkat Sekarang</option>
+              <option value="later">Jadwal Nanti</option>
             </select>
             <button type="submit" className="pandu-primary-button" disabled={loading}>
-              {loading ? 'Loading…' : 'Show routes'}
+              {loading ? 'Menghitung Rute…' : 'Cari Rute Transit'}
             </button>
           </div>
         </form>
 
         <section className="pandu-recommended-route">
-          {routeAttempted && !routeReady ? <ExplicitDataState title="Data rute belum tersedia" body="GTFS tidak mengirim perjalanan yang cocok. Kami tidak menampilkan rute kosong atau membuat rekomendasi tanpa sumber." actionLabel="Open data status" onAction={() => onNavigate('/data-availability')} /> : null}
-          {!routeAttempted ? <ExplicitDataState title="Pilih asal dan tujuan" body="PanduYuk akan menampilkan rute hanya jika GTFS memiliki perjalanan yang benar-benar menghubungkan pilihan Anda." /> : null}
+          {routeAttempted && !routeReady ? (
+            <ExplicitDataState
+              title="Data rute sedang diproses"
+              body="Rute belum dapat dikalkulasi untuk kombinasi ini. Silakan pilih titik transit terdekat lainnya."
+              actionLabel="Lihat Peta Transit"
+              onAction={() => onNavigate('/webgis-map')}
+            />
+          ) : null}
+          {!routeAttempted ? (
+            <ExplicitDataState
+              title="Pilih asal dan tujuan"
+              body="PanduYuk menghitung estimasi waktu, jumlah transfer, posisi gerbong ideal, dan analisis rute cerdas terintegrasi Gemini AI."
+            />
+          ) : null}
           {routeReady ? <>
            {routeOptions.length > 1 ? (
-             <div className="pandu-route-options" aria-label="Pilihan rute GTFS">
+             <div className="pandu-route-options" aria-label="Pilihan rute transit">
                <div className="pandu-route-options-heading">
-                 <span className="pandu-card-label blue">ROUTE OPTIONS</span>
-                 <span>{routeOptions.length} opsi rute GTFS</span>
+                 <span className="pandu-card-label blue">OPSI RUTE</span>
+                 <span>{routeOptions.length} alternatif rute</span>
                </div>
                <div className="pandu-route-options-list">
                  {routeOptions.map((option, index) => {
                    const optionLeg = option.legs?.[0];
                    const optionRouteNames = [...new Set((option.legs || []).map((leg) => leg.route_name || leg.route_id).filter(Boolean))].join(' → ');
-                   const optionLabel = index === 0 ? 'Recommended' : `Alternative ${index}`;
+                   const optionLabel = index === 0 ? 'Rekomendasi Utama' : `Alternatif ${index}`;
                    const optionColor = routeLegColor(optionLeg, index);
                    const isSelected = index === selectedRouteIndex;
                    return (
@@ -1424,8 +1529,8 @@ function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
                        <span className="pandu-route-option-marker" aria-hidden="true" />
                        <span className="pandu-route-option-copy">
                          <strong>{optionLabel}</strong>
-                         <span>{optionLeg?.mode || 'Transit'} · {optionRouteNames || 'Route unavailable'}</span>
-                         <small>{option.estimated_duration_minutes || '—'} min · {option.total_transfers || 0} transfer · {option.legs?.reduce((total, leg) => total + (leg.stops?.length || 0), 0) || 0} stop</small>
+                         <span>{optionLeg?.mode || 'Transit'} · {optionRouteNames || 'Rute Langsung'}</span>
+                         <small>{option.estimated_duration_minutes || '—'} mnt · {option.total_transfers || 0} transfer · {option.legs?.reduce((total, leg) => total + (leg.stops?.length || 0), 0) || 0} titik stop</small>
                        </span>
                        {isSelected ? <CircleCheck size={16} aria-hidden="true" /> : <ArrowRight size={15} aria-hidden="true" />}
                      </button>
@@ -1434,15 +1539,38 @@ function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
                </div>
              </div>
            ) : null}
-           <span className="pandu-card-label blue">{selectedRouteIndex === 0 ? 'RECOMMENDED FOR YOU' : 'SELECTED ALTERNATIVE'}</span>
-           <h2>{selectedRouteIndex === 0 ? 'The calmest route' : `Alternative route ${selectedRouteIndex}`}</h2>
-           <p className="pandu-route-summary">{transferCount} transfer&nbsp; · &nbsp;{estimatedDuration} min&nbsp; · &nbsp;{formatFare(totalFare)}</p>
+
+           <div className="pandu-route-badge-row">
+             <span className="pandu-card-label blue">{selectedRouteIndex === 0 ? 'REKOMENDASI TERBAIK' : 'RUTE ALTERNATIF'}</span>
+             <span className="pandu-smart-router-badge">✨ MAPID Router & Gemini AI</span>
+           </div>
+
+           <h2>{selectedRouteIndex === 0 ? 'The calmest route (Rute Paling Nyaman)' : `Rute Alternatif ${selectedRouteIndex}`}</h2>
+           <p className="pandu-route-summary">{transferCount} transfer&nbsp; · &nbsp;{estimatedDuration} mnt&nbsp; · &nbsp;{formatFare(totalFare)}</p>
+           
            <RouteStationSequence route={routeSummary} />
-           <div className="pandu-route-note">{routeMethod || 'Dijkstra · explainable GTFS weights'} · {routeSummary.data_source} · {formatUpdatedAt(routeSummary.last_updated)}</div>
-          <button type="button" className="pandu-primary-button pandu-route-cta" onClick={() => onNavigate('/trip-detail')}>
-            {routeReady ? 'Continue with live route' : 'Show route details'} <ArrowRight size={15} />
-          </button>
-           </> : null}
+
+           {/* Gemini AI Transit Advisor Card */}
+           {journeyData?.transit_intelligence?.gemini_ai_advice && (
+             <div className="pandu-ai-advice-card">
+               <div className="pandu-ai-advice-header">
+                 <span className="pandu-ai-badge-pill">✨ Gemini AI Transit Advisor</span>
+                 <span className="pandu-ai-advice-source">Autonomous Live Telemetry</span>
+               </div>
+               <div className="pandu-ai-advice-body">
+                 {journeyData.transit_intelligence.gemini_ai_advice}
+               </div>
+             </div>
+           )}
+
+           <div className="pandu-route-note">
+             {routeMethod || 'MAPID Multimodal Spatial Intelligence'} · {routeSummary.data_source} · {formatUpdatedAt(routeSummary.last_updated)}
+           </div>
+
+           <button type="button" className="pandu-primary-button pandu-route-cta" onClick={() => onNavigate('/trip-detail')}>
+             {routeReady ? 'Mulai Panduan Perjalanan Langsung' : 'Lihat Detail Rute'} <ArrowRight size={15} />
+           </button>
+          </> : null}
         </section>
       </div>
       {routeReady ? <RouteMapPanel route={routeSummary} /> : null}
@@ -1713,7 +1841,7 @@ export default function PanduYukExperience({ onLogout }) {
 
   useEffect(() => {
     let active = true;
-    api.get('/stations')
+    api.get('/stations?limit=800')
       .then((response) => {
         const data = normalizeStations(response.data);
         if (active && data.length > 0) setStations(data);
