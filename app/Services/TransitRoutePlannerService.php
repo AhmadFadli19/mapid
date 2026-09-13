@@ -16,22 +16,28 @@ class TransitRoutePlannerService
     private const WALK_SPEED_MPS = 1.2;
     private const INITIAL_WAIT_SECONDS = 300;
     private const TRANSFER_BUFFER_SECONDS = 120;
+    private const MAX_ROUTE_ALTERNATIVES = 5;
 
     public function plan(Station $origin, Station $destination, ?float $destinationLat = null, ?float $destinationLon = null): ?array
     {
-        $originStop = $this->resolveStop($origin);
-        $destinationStop = $this->resolveStop($destination);
-        if (!$originStop || !$destinationStop || $originStop->stop_id === $destinationStop->stop_id) return null;
+        $originStops = $this->resolveStops($origin);
+        $destinationStops = $this->resolveStops($destination);
+        if ($originStops->isEmpty() || $destinationStops->isEmpty()) return null;
 
         $candidateIds = array_values(array_unique(array_merge(
-            [$originStop->stop_id, $destinationStop->stop_id],
+            $originStops->pluck('stop_id')->all(),
+            $destinationStops->pluck('stop_id')->all(),
             GtfsTransfer::query()->pluck('from_stop_id')->all(),
             GtfsTransfer::query()->pluck('to_stop_id')->all()
         )));
         $rideEdges = $this->buildRideEdges($candidateIds);
         $transferEdges = $this->buildTransferEdges($candidateIds);
-        $path = $this->dijkstra($originStop->stop_id, $destinationStop->stop_id, $rideEdges, $transferEdges);
-        if ($path === null) return null;
+        $paths = $this->findAlternativePaths($originStops, $destinationStops, $rideEdges, $transferEdges);
+        if ($paths === []) return null;
+
+        $primaryPath = $paths[0]['path'];
+        $originStop = $paths[0]['origin_stop'];
+        $destinationStop = $paths[0]['destination_stop'];
 
         $legs = [];
         $timeline = [[
@@ -51,7 +57,7 @@ class TransitRoutePlannerService
         $pendingTransfer = null;
         $mapFeatures = [];
 
-        foreach ($path as $edge) {
+        foreach ($primaryPath as $edge) {
             $totalWeightSeconds += $edge['weight_seconds'];
             if ($edge['kind'] === 'transfer') {
                 $pendingTransfer = $edge['name'];
@@ -159,8 +165,21 @@ class TransitRoutePlannerService
             'last_updated' => $this->staticFeedTimestamp(),
         ];
 
+        $alternativeRoutes = [];
+        foreach (array_slice($paths, 1) as $alternative) {
+            $alternativeRoutes[] = $this->routePayloadFromPath(
+                $alternative['path'],
+                $origin,
+                $destination,
+                $alternative['origin_stop'],
+                $alternative['destination_stop']
+            );
+        }
+
         return [
             'route' => $route,
+            'alternatives' => $alternativeRoutes,
+            'alternative_count' => count($alternativeRoutes),
             'journey_plan' => [
                 'origin_stop_id' => $originStop->stop_id,
                 'destination_stop_id' => $destinationStop->stop_id,
@@ -188,11 +207,11 @@ class TransitRoutePlannerService
         ];
     }
 
-    private function resolveStop(Station $station): ?GtfsStop
+    private function resolveStops(Station $station): Collection
     {
         $codes = array_values(array_unique(array_filter([$station->code, preg_replace('/^TJ_/', '', $station->code)])));
-        $stop = GtfsStop::query()->whereIn('stop_id', $codes)->orWhereIn('stop_code', $codes)->first();
-        if ($stop) return $stop;
+        $codeStops = GtfsStop::query()->whereIn('stop_id', $codes)->orWhereIn('stop_code', $codes)->get();
+        if ($codeStops->isNotEmpty()) return $codeStops->values();
 
         $fullName = strtolower(trim($station->name));
         $shortName = strtolower(preg_replace('/^(stasiun|halte)\s+/i', '', $station->name));
@@ -201,15 +220,163 @@ class TransitRoutePlannerService
             ->orWhereRaw('LOWER(stop_name) = ?', [$shortName])
             ->get();
         $scheduledNamedStops = $namedStops->filter(fn (GtfsStop $candidate) => DB::table('gtfs_stop_times')->where('stop_id', $candidate->stop_id)->exists());
-        if ($scheduledNamedStops->isNotEmpty()) $namedStops = $scheduledNamedStops;
-        $stop = $namedStops->sortBy(fn (GtfsStop $candidate) => $this->distanceMeters($station->latitude, $station->longitude, $candidate->stop_lat, $candidate->stop_lon))->first();
-        if ($stop) return $stop;
+        if ($scheduledNamedStops->isNotEmpty()) {
+            return $scheduledNamedStops
+                ->sortBy(fn (GtfsStop $candidate) => $this->distanceMeters($station->latitude, $station->longitude, $candidate->stop_lat, $candidate->stop_lon))
+                ->values();
+        }
 
         $nearby = GtfsStop::query()
             ->whereBetween('stop_lat', [$station->latitude - 0.02, $station->latitude + 0.02])
             ->whereBetween('stop_lon', [$station->longitude - 0.02, $station->longitude + 0.02])
             ->get();
-        return $nearby->sortBy(fn (GtfsStop $candidate) => $this->distanceMeters($station->latitude, $station->longitude, $candidate->stop_lat, $candidate->stop_lon))->first(fn (GtfsStop $candidate) => $this->distanceMeters($station->latitude, $station->longitude, $candidate->stop_lat, $candidate->stop_lon) <= 2000);
+        $scheduledNearby = $nearby->filter(fn (GtfsStop $candidate) => DB::table('gtfs_stop_times')->where('stop_id', $candidate->stop_id)->exists());
+        $nearbyStops = $scheduledNearby->isNotEmpty() ? $scheduledNearby : $nearby;
+        return $nearbyStops
+            ->sortBy(fn (GtfsStop $candidate) => $this->distanceMeters($station->latitude, $station->longitude, $candidate->stop_lat, $candidate->stop_lon))
+            ->filter(fn (GtfsStop $candidate) => $this->distanceMeters($station->latitude, $station->longitude, $candidate->stop_lat, $candidate->stop_lon) <= 2000)
+            ->take(12)
+            ->values();
+    }
+
+    private function findAlternativePaths(Collection $originStops, Collection $destinationStops, array $rideEdges, array $transferEdges): array
+    {
+        $candidates = [];
+        $seen = [];
+
+        foreach ($originStops as $originStop) {
+            foreach ($destinationStops as $destinationStop) {
+                if ($originStop->stop_id === $destinationStop->stop_id) continue;
+
+                $shortestPath = $this->dijkstra($originStop->stop_id, $destinationStop->stop_id, $rideEdges, $transferEdges);
+                if ($shortestPath === null) continue;
+
+                foreach ($this->kShortestPaths($originStop->stop_id, $destinationStop->stop_id, $rideEdges, $transferEdges, self::MAX_ROUTE_ALTERNATIVES) as $path) {
+                    $signature = $this->pathSignature($path);
+                    $cost = array_sum(array_column($path, 'weight_seconds'));
+                    if (isset($seen[$signature]) && $seen[$signature]['cost'] <= $cost) continue;
+
+                    $candidate = [
+                        'path' => $path,
+                        'origin_stop' => $originStop,
+                        'destination_stop' => $destinationStop,
+                        'cost' => $cost,
+                    ];
+                    $seen[$signature] = $candidate;
+                }
+            }
+        }
+
+        $candidates = array_values($seen);
+        usort($candidates, fn (array $left, array $right) => $left['cost'] <=> $right['cost']);
+        return array_slice($candidates, 0, self::MAX_ROUTE_ALTERNATIVES);
+    }
+
+    private function kShortestPaths(string $start, string $target, array $rideEdges, array $transferEdges, int $limit): array
+    {
+        $queue = new \SplPriorityQueue();
+        $queue->setExtractFlags(\SplPriorityQueue::EXTR_DATA);
+        $queue->insert(['node' => $start, 'path' => [], 'visited' => [$start => true], 'cost' => 0], 0);
+        $paths = [];
+        $expansions = 0;
+
+        while (!$queue->isEmpty() && count($paths) < $limit && $expansions < 5000) {
+            $state = $queue->extract();
+            $expansions++;
+            if ($state['node'] === $target) {
+                $paths[] = $state['path'];
+                continue;
+            }
+
+            foreach (array_merge($rideEdges[$state['node']] ?? [], $transferEdges[$state['node']] ?? []) as $edge) {
+                if (isset($state['visited'][$edge['to']])) continue;
+                $visited = $state['visited'];
+                $visited[$edge['to']] = true;
+                $path = $state['path'];
+                $path[] = $edge;
+                $cost = $state['cost'] + $edge['weight_seconds'];
+                $queue->insert(['node' => $edge['to'], 'path' => $path, 'visited' => $visited, 'cost' => $cost], -$cost);
+            }
+        }
+
+        return $paths;
+    }
+
+    private function pathSignature(array $path): string
+    {
+        $labels = [];
+        foreach ($path as $edge) {
+            $label = $edge['kind'] === 'transfer'
+                ? "transfer:{$edge['to']}"
+                : "ride:{$edge['route_id']}";
+            if ($labels === [] || end($labels) !== $label) $labels[] = $label;
+        }
+        return implode('>', $labels);
+    }
+
+    private function routePayloadFromPath(array $path, Station $origin, Station $destination, GtfsStop $originStop, GtfsStop $destinationStop): array
+    {
+        $legs = [];
+        $intermediate = [];
+        $totalWeightSeconds = 0;
+        $rideCount = 0;
+        $pendingTransfer = null;
+        $mapFeatures = [];
+
+        foreach ($path as $edge) {
+            $totalWeightSeconds += $edge['weight_seconds'];
+            if ($edge['kind'] === 'transfer') {
+                $pendingTransfer = $edge['name'];
+                continue;
+            }
+
+            $rideCount++;
+            $stops = $edge['stops'];
+            foreach (array_slice($stops, 1, -1) as $stop) {
+                $intermediate[$stop['id']] = $stop;
+            }
+            $mode = $this->modeForRouteType($edge['route_type'], $edge['agency_id']);
+            $legs[] = [
+                'mode' => $mode,
+                'operator' => $edge['agency_id'],
+                'route_id' => $edge['route_id'],
+                'route_name' => $edge['route_name'],
+                'color' => $edge['route_color'],
+                'trip_id' => $edge['trip_id'],
+                'stops' => $stops,
+                'transfer_at' => $pendingTransfer,
+                'duration_minutes' => (int)ceil($edge['duration_seconds'] / 60),
+                'data_source' => 'GTFS_STATIC',
+            ];
+            $pendingTransfer = null;
+            $mapFeatures[] = [
+                'type' => 'Feature',
+                'geometry' => ['type' => 'LineString', 'coordinates' => $this->geometryForLeg($edge['route_id'], $stops)],
+                'properties' => ['route_id' => $edge['route_id'], 'route_name' => $edge['route_name'], 'color' => $edge['route_color'], 'mode' => $mode, 'operator' => $edge['agency_id'], 'geometry_source' => 'GTFS_SHAPE_OR_STOP_SEQUENCE'],
+            ];
+        }
+
+        if ($legs !== []) {
+            $firstDeparture = $legs[0]['stops'][0]['departure_time'] ?? $legs[0]['stops'][0]['arrival_time'] ?? null;
+            $totalWeightSeconds = max(0, $totalWeightSeconds - self::INITIAL_WAIT_SECONDS + $this->secondsUntilNextService($firstDeparture));
+        }
+
+        return [
+            'origin' => $this->stationPayload($origin),
+            'destination' => $this->stationPayload($destination),
+            'origin_stop_id' => $originStop->stop_id,
+            'destination_stop_id' => $destinationStop->stop_id,
+            'legs' => $legs,
+            'intermediate_stations' => array_values($intermediate),
+            'total_duration_minutes' => (int)ceil($totalWeightSeconds / 60),
+            'estimated_duration_minutes' => (int)ceil($totalWeightSeconds / 60),
+            'total_transfers' => max(0, $rideCount - 1),
+            'distance_km' => round($this->pathDistance($legs) / 1000, 2),
+            'total_fare' => null,
+            'map' => ['type' => 'FeatureCollection', 'features' => $mapFeatures],
+            'data_source' => 'GTFS_STATIC',
+            'last_updated' => $this->staticFeedTimestamp(),
+        ];
     }
 
     private function buildRideEdges(array $candidateIds): array
@@ -249,7 +416,7 @@ class TransitRoutePlannerService
         foreach ($edges as $from => $list) {
             $best = [];
             foreach ($list as $edge) {
-                $key = $edge['to'];
+                $key = $edge['to'] . '|' . $edge['route_id'];
                 if (!isset($best[$key]) || $edge['weight_seconds'] < $best[$key]['weight_seconds']) $best[$key] = $edge;
             }
             $edges[$from] = array_values($best);

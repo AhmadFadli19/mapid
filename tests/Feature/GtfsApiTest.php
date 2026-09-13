@@ -80,8 +80,33 @@ class GtfsApiTest extends TestCase
                              'boarding_recommendation',
                              'arrival_reminder',
                          ]
-                     ]
+                 ]
                  ]);
+    }
+
+    public function test_route_plan_returns_distinct_gtfs_alternatives()
+    {
+        $response = $this->postJson('/api/v1/route/plan', [
+            'origin_id' => 128,
+            'destination_id' => 130,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonStructure([
+                'data' => [
+                    'route' => ['legs'],
+                    'alternatives',
+                    'alternative_count',
+                ],
+            ]);
+
+        $alternatives = $response->json('data.alternatives');
+        $this->assertNotEmpty($alternatives);
+        $routeIds = array_unique(array_merge(
+            [$response->json('data.route.legs.0.route_id')],
+            array_map(fn (array $route) => $route['legs'][0]['route_id'] ?? null, $alternatives)
+        ));
+        $this->assertGreaterThanOrEqual(2, count(array_filter($routeIds)));
     }
 
     public function test_route_plan_returns_unavailable_for_unconnected_stations()

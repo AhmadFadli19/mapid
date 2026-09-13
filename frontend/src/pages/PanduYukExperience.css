@@ -1092,6 +1092,104 @@
   font-weight: 700;
 }
 
+.pandu-route-options {
+  margin: 0 0 16px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  border: 1px solid color-mix(in srgb, var(--blue) 14%, transparent);
+  border-radius: 16px;
+}
+
+.pandu-route-options-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.pandu-route-options-heading > span:last-child {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.pandu-route-options-list {
+  display: grid;
+  gap: 7px;
+}
+
+.pandu-route-option {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  padding: 9px 10px;
+  color: var(--text);
+  text-align: left;
+  background: var(--surface-soft);
+  border: 1px solid transparent;
+  border-radius: 11px;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+
+.pandu-route-option:hover,
+.pandu-route-option.is-selected {
+  background: color-mix(in srgb, var(--route-option-color) 8%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--route-option-color) 42%, transparent);
+}
+
+.pandu-route-option:active {
+  transform: translateY(1px);
+}
+
+.pandu-route-option-marker {
+  width: 8px;
+  height: 8px;
+  display: block;
+  background: var(--route-option-color);
+  border-radius: 50%;
+}
+
+.pandu-route-option-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.pandu-route-option-copy strong {
+  color: var(--blue);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.pandu-route-option-copy span,
+.pandu-route-option-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pandu-route-option-copy span {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pandu-route-option-copy small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.pandu-route-option > svg {
+  flex: 0 0 auto;
+  color: var(--route-option-color);
+}
+
 .pandu-route-station-sequence {
   max-height: 214px;
   margin-top: 18px;

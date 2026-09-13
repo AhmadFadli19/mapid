@@ -911,17 +911,26 @@ function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
   const [routeReady, setRouteReady] = useState(false);
   const [routeAttempted, setRouteAttempted] = useState(false);
   const [journeyData, setJourneyData] = useState(null);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
 
   useEffect(() => {
     if (originId && !stations.some((station) => String(station.id) === String(originId))) setOriginId('');
     if (destinationId && !stations.some((station) => String(station.id) === String(destinationId))) setDestinationId('');
   }, [stations]);
 
-  const routeSummary = journeyData?.route;
+  const routeOptions = useMemo(() => {
+    if (!journeyData?.route) return [];
+    return [journeyData.route, ...(journeyData.alternatives || [])];
+  }, [journeyData]);
+  const routeSummary = routeOptions[selectedRouteIndex] || journeyData?.route;
   const estimatedDuration = routeSummary?.estimated_duration_minutes;
   const totalFare = routeSummary?.total_fare;
   const transferCount = routeSummary?.total_transfers ?? 0;
   const routeMethod = journeyData?.transit_intelligence?.boarding_recommendation?.analysis_method;
+
+  useEffect(() => {
+    setSelectedRouteIndex(0);
+  }, [journeyData]);
 
   const handleFindRoutes = async (event) => {
     event.preventDefault();
@@ -933,6 +942,7 @@ function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
       const data = response.data?.data || null;
       setJourneyData(data);
       setRouteReady(Boolean(data));
+      setSelectedRouteIndex(0);
       if (data) onJourneyReady(data);
     } catch {
       setRouteReady(false);
@@ -986,8 +996,46 @@ function PlanTripView({ stations, onNavigate, onToast, onJourneyReady }) {
           {routeAttempted && !routeReady ? <ExplicitDataState title="Data rute belum tersedia" body="GTFS tidak mengirim perjalanan yang cocok. Kami tidak menampilkan rute kosong atau membuat rekomendasi tanpa sumber." actionLabel="Open data status" onAction={() => onNavigate('/data-availability')} /> : null}
           {!routeAttempted ? <ExplicitDataState title="Pilih asal dan tujuan" body="PanduYuk akan menampilkan rute hanya jika GTFS memiliki perjalanan yang benar-benar menghubungkan pilihan Anda." /> : null}
           {routeReady ? <>
-           <span className="pandu-card-label blue">RECOMMENDED FOR YOU</span>
-           <h2>The calmest route</h2>
+           {routeOptions.length > 1 ? (
+             <div className="pandu-route-options" aria-label="Pilihan rute GTFS">
+               <div className="pandu-route-options-heading">
+                 <span className="pandu-card-label blue">ROUTE OPTIONS</span>
+                 <span>{routeOptions.length} opsi rute GTFS</span>
+               </div>
+               <div className="pandu-route-options-list">
+                 {routeOptions.map((option, index) => {
+                   const optionLeg = option.legs?.[0];
+                   const optionRouteNames = [...new Set((option.legs || []).map((leg) => leg.route_name || leg.route_id).filter(Boolean))].join(' → ');
+                   const optionLabel = index === 0 ? 'Recommended' : `Alternative ${index}`;
+                   const optionColor = routeLegColor(optionLeg, index);
+                   const isSelected = index === selectedRouteIndex;
+                   return (
+                     <button
+                       key={`${option.origin_stop_id}-${option.destination_stop_id}-${optionLeg?.route_id || index}`}
+                       type="button"
+                       className={`pandu-route-option ${isSelected ? 'is-selected' : ''}`}
+                       style={{ '--route-option-color': optionColor }}
+                       aria-pressed={isSelected}
+                       onClick={() => {
+                         setSelectedRouteIndex(index);
+                         onJourneyReady({ ...journeyData, route: option });
+                       }}
+                     >
+                       <span className="pandu-route-option-marker" aria-hidden="true" />
+                       <span className="pandu-route-option-copy">
+                         <strong>{optionLabel}</strong>
+                         <span>{optionLeg?.mode || 'Transit'} · {optionRouteNames || 'Route unavailable'}</span>
+                         <small>{option.estimated_duration_minutes || '—'} min · {option.total_transfers || 0} transfer · {option.legs?.reduce((total, leg) => total + (leg.stops?.length || 0), 0) || 0} stop</small>
+                       </span>
+                       {isSelected ? <CircleCheck size={16} aria-hidden="true" /> : <ArrowRight size={15} aria-hidden="true" />}
+                     </button>
+                   );
+                 })}
+               </div>
+             </div>
+           ) : null}
+           <span className="pandu-card-label blue">{selectedRouteIndex === 0 ? 'RECOMMENDED FOR YOU' : 'SELECTED ALTERNATIVE'}</span>
+           <h2>{selectedRouteIndex === 0 ? 'The calmest route' : `Alternative route ${selectedRouteIndex}`}</h2>
            <p className="pandu-route-summary">{transferCount} transfer&nbsp; · &nbsp;{estimatedDuration} min&nbsp; · &nbsp;{formatFare(totalFare)}</p>
            <RouteStationSequence route={routeSummary} />
            <div className="pandu-route-note">{routeMethod || 'Dijkstra · explainable GTFS weights'} · {routeSummary.data_source} · {formatUpdatedAt(routeSummary.last_updated)}</div>
