@@ -211,7 +211,6 @@ function PanduHeader({ darkMode, onToggleTheme, title, backLabel, mobileBackLabe
       <nav className="pandu-desktop-nav" aria-label="Navigasi PanduYuk">
         <button type="button" className={!title ? 'is-active' : ''} onClick={() => navigate('/webgis-dashboard')}>Explore</button>
         <button type="button" className={title === 'Your journey' ? 'is-active' : ''} onClick={() => navigate('/trip-detail')}>My trips</button>
-        <button type="button" onClick={() => navigate('/webgis-dashboard#how-it-works')}>How it works</button>
       </nav>
 
       {title ? <div className="pandu-page-title">{title}</div> : null}
@@ -1128,7 +1127,7 @@ function HomeView({ stations, onNavigate, onToast, journeyData }) {
             </article>
           </div> : null}
 
-          <div className="pandu-quick-actions-block" id="how-it-works">
+          <div className="pandu-quick-actions-block">
             <p className="pandu-section-label">QUICK ACTIONS</p>
             <div className="pandu-quick-actions">
               <button type="button" className="pandu-quick-card" onClick={() => onNavigate('/station-info')}>
