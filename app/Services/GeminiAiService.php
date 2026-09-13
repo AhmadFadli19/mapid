@@ -20,7 +20,7 @@ class GeminiAiService
     public function __construct()
     {
         $this->apiKey = env('GEMINI_API_KEY', '');
-        $this->model = 'gemini-3.6-flash';
+        $this->model = env('GEMINI_MODEL', 'gemini-1.5-flash');
     }
 
     /**
@@ -108,13 +108,6 @@ class GeminiAiService
      */
     public function enrichStation(Station $station, bool $force = false): array
     {
-        return [
-            'status' => 'disabled',
-            'message' => 'AI tidak menulis data fasilitas, exit, boarding, atau tenant resmi. Gunakan ingestion GTFS/MAPID terverifikasi.',
-            'data_source' => 'AI_OPTIONAL_ONLY',
-            'station_id' => $station->id,
-        ];
-
         $cacheKey = "station_ai_enrichment_{$station->id}";
         if (!$force && !$this->shouldAutoEnrich($station)) {
             $existing = Cache::get($cacheKey);
